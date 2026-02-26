@@ -1,17 +1,35 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link';
-import RealTimeClock from '@/components/RealTimeClock';
+import FileUpload from '@/components/FileUpload'
+import Link from 'next/link'
+import RealTimeClock from '@/components/RealTimeClock'
 
 interface Subject { _id: string; name: string; code: string }
 interface Announcement {
   _id: string; title: string; content: string
   subject: Subject | null; scope: string
   isPinned: boolean; readBy: string[]; createdAt: string
+  fileUrl?: string; fileName?: string
 }
 
-const EMPTY = { title: '', content: '', subject: '', isPinned: false }
+interface Notification {
+  _id: string; type: string; title: string; message: string
+  link: string; isRead: boolean; createdAt: string
+}
+const TYPE_ICON: Record<string, string> = {
+  project_approved: '✅', project_rejected: '❌', project_published: '📋',
+  submission_received: '📥', submission_graded: '🏆',
+  deadline_warning: '⏰', announcement_posted: '📢',
+}
+function timeAgo(d: string) {
+  const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000)
+  if (s < 60) return 'just now'
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  return `${Math.floor(s / 86400)}d ago`
+}
+const EMPTY = { title: '', content: '', subject: '', isPinned: false, fileUrl: '', fileName: '' }
 
 export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
@@ -21,20 +39,65 @@ export default function AnnouncementsPage() {
   const [form, setForm] = useState(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [tab, setTab] = useState<'announcements' | 'notifications'>('announcements')
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadNotifs, setUnreadNotifs] = useState(0)
 
   async function load() {
-    const [aRes, sRes] = await Promise.all([
-      fetch('/api/teacher/announcements'),
-      fetch('/api/teacher/subjects'),
-    ])
-    const aResData = await aRes.json()
-    setAnnouncements(Array.isArray(aResData) ? aResData : [])
-    const sResData = await sRes.json()
-    setSubjects(Array.isArray(sResData) ? sResData : [])
-    setLoading(false)
+    try {
+      const [aRes, sRes] = await Promise.all([
+        fetch('/api/teacher/announcements'),
+        fetch('/api/teacher/subjects'),
+      ])
+      const aData = await aRes.json()
+      const sData = await sRes.json()
+      setAnnouncements(Array.isArray(aData) ? aData : [])
+      setSubjects(Array.isArray(sData) ? sData : [])
+    } catch {
+      setAnnouncements([])
+      setSubjects([])
+    } finally {
+      setLoading(false)
+    }
   }
 
-  useEffect(() => { load() }, [])
+  async function loadNotifications() {
+    const res = await fetch('/api/notifications?limit=50')
+    const data = await res.json()
+    if (data.notifications) {
+      setNotifications(data.notifications)
+      setUnreadNotifs(data.unreadCount)
+    }
+  }
+
+  async function markNotifRead(id: string) {
+    await fetch('/api/notifications', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n))
+    setUnreadNotifs(p => Math.max(0, p - 1))
+  }
+
+  async function markAllNotifsRead() {
+    await fetch('/api/notifications', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ markAll: true }),
+    })
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+    setUnreadNotifs(0)
+  }
+
+  async function dismissNotif(id: string) {
+    await fetch(`/api/notifications?id=${id}`, { method: 'DELETE' })
+    setNotifications(prev => {
+      const n = prev.find(x => x._id === id)
+      if (n && !n.isRead) setUnreadNotifs(c => Math.max(0, c - 1))
+      return prev.filter(x => x._id !== id)
+    })
+  }
+
+  useEffect(() => { load(); loadNotifications() }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -43,7 +106,7 @@ export default function AnnouncementsPage() {
     const res = await fetch('/api/teacher/announcements', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, subject: form.subject || null }),
+      body: JSON.stringify({ ...form, subject: form.subject || null, fileUrl: form.fileUrl || null, fileName: form.fileName || null }),
     })
     const data = await res.json()
     setSubmitting(false)
@@ -80,13 +143,35 @@ export default function AnnouncementsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <p className="text-[#1a7a6e] text-xs font-mono tracking-[0.2em] uppercase mb-1">お知らせ</p>
-          <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>Announcements</h1>
+          <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>Announcements &amp; Notifications</h1>
         </div>
         <RealTimeClock accentColor="#1a7a6e" />
-        <button onClick={() => { setShowForm(true); setError('') }}
-          className="flex items-center gap-2 bg-[#1a3a2a] text-[#d4a843] px-4 py-2 text-sm font-semibold border border-[rgba(212,168,67,0.3)] hover:bg-[#224d38] transition-colors rounded-sm shadow-[2px_2px_0_rgba(26,18,9,0.3)]">
-          ＋ New Announcement
-        </button>
+        {tab === 'announcements' && (
+          <button onClick={() => { setShowForm(true); setError('') }}
+            className="flex items-center gap-2 bg-[#1a3a2a] text-[#d4a843] px-4 py-2 text-sm font-semibold border border-[rgba(212,168,67,0.3)] hover:bg-[#224d38] transition-colors rounded-sm shadow-[2px_2px_0_rgba(26,18,9,0.3)]">
+            ＋ New Announcement
+          </button>
+        )}
+      </div>
+
+      {/* ── Tabs ── */}
+      <div className="flex gap-1 bg-[#f0e9d6] p-1 rounded-sm w-fit mb-6">
+        {([
+          { key: 'announcements', label: '📢 Announcements', badge: 0 },
+          { key: 'notifications', label: '🔔 Notifications',  badge: unreadNotifs },
+        ] as const).map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className={`relative px-4 py-2 text-xs font-mono uppercase tracking-wider rounded-sm transition-all flex items-center gap-2 ${
+              tab === t.key ? 'bg-[#1a3a2a] text-[#d4a843]' : 'text-[#7a6a52] hover:text-[#1a1209]'
+            }`}>
+            {t.label}
+            {t.badge > 0 && (
+              <span className="min-w-[16px] h-4 px-1 bg-[#c0392b] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                {t.badge}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       {/* Form modal */}
@@ -118,6 +203,14 @@ export default function AnnouncementsPage() {
                   {subjects.map(s => <option key={s._id} value={s._id}>{s.name} ({s.code})</option>)}
                 </select>
               </div>
+              <div>
+                <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">Attachment (optional)</label>
+                <FileUpload
+                  value={form.fileUrl}
+                  onChange={(url, name) => setForm(p => ({ ...p, fileUrl: url, fileName: name }))}
+                  accentColor="#1a7a6e"
+                />
+              </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={form.isPinned} onChange={e => setForm(p => ({ ...p, isPinned: e.target.checked }))}
                   className="w-4 h-4 accent-[#1a7a6e]" />
@@ -134,7 +227,45 @@ export default function AnnouncementsPage() {
         </div>
       )}
 
-      {loading ? (
+      {tab === 'notifications' ? (
+        /* ══════════ NOTIFICATIONS TAB ══════════ */
+        <div>
+          {unreadNotifs > 0 && (
+            <div className="flex justify-end mb-3">
+              <button onClick={markAllNotifsRead} className="text-xs font-mono text-[#1a7a6e] hover:underline underline-offset-2">Mark all as read</button>
+            </div>
+          )}
+          {notifications.length === 0 ? (
+            <div className="bg-white border border-[#c8b89a] rounded-sm p-12 text-center shadow-[3px_3px_0_#c8b89a]">
+              <div className="text-4xl mb-3">🔔</div>
+              <p className="text-[#7a6a52] text-sm">No notifications yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {notifications.map(n => (
+                <div key={n._id} className={`bg-white border rounded-sm shadow-[2px_2px_0_#c8b89a] flex items-start gap-4 px-5 py-4 group transition-all ${
+                  !n.isRead ? 'border-l-4 border-l-[#1a7a6e] border-[#c8b89a]' : 'border-[#c8b89a]'
+                }`}>
+                  <span className="text-xl shrink-0 mt-0.5">{TYPE_ICON[n.type] ?? '🔔'}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className={`font-bold text-sm ${!n.isRead ? 'text-[#1a1209]' : 'text-[#7a6a52]'}`} style={{ fontFamily: 'Georgia, serif' }}>{n.title}</h3>
+                      {!n.isRead && <div className="w-2 h-2 rounded-full bg-[#1a7a6e] shrink-0 mt-1.5" />}
+                    </div>
+                    <p className="text-sm text-[#7a6a52] mt-1 leading-relaxed">{n.message}</p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-xs font-mono text-[#a89880]">{timeAgo(n.createdAt)}</span>
+                      {!n.isRead && <button onClick={() => markNotifRead(n._id)} className="text-xs font-mono text-[#1a7a6e] hover:underline underline-offset-2">Mark read</button>}
+                      <a href={n.link} className="text-xs font-mono text-[#1a7a6e] hover:underline underline-offset-2 ml-auto">Go to page →</a>
+                    </div>
+                  </div>
+                  <button onClick={() => dismissNotif(n._id)} className="text-[#c8b89a] hover:text-[#c0392b] text-sm opacity-0 group-hover:opacity-100 transition-all shrink-0 px-1">✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : loading ? (
         <div className="text-[#7a6a52] text-sm font-mono animate-pulse">Loading...</div>
       ) : announcements.length === 0 ? (
         <div className="bg-white border border-[#c8b89a] rounded-sm p-12 text-center shadow-[3px_3px_0_#c8b89a]">
@@ -161,9 +292,15 @@ export default function AnnouncementsPage() {
                   </div>
                   <h3 className="font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>{a.title}</h3>
                   <p className="text-sm text-[#7a6a52] mt-1 leading-relaxed">{a.content}</p>
-                  <div className="flex gap-3 mt-2 text-xs text-[#7a6a52] font-mono">
+                  <div className="flex gap-3 mt-2 text-xs text-[#7a6a52] font-mono flex-wrap">
                     <span>📅 {new Date(a.createdAt).toLocaleDateString()}</span>
                     <span>👁 {a.readBy?.length ?? 0} read</span>
+                    {a.fileUrl && (
+                      <a href={a.fileUrl} target="_blank" rel="noreferrer"
+                        className="text-[#1a7a6e] hover:underline underline-offset-2">
+                        📎 {a.fileName || 'Attachment'} ↗
+                      </a>
+                    )}
                   </div>
                 </div>
                 <button onClick={() => deleteAnnouncement(a._id)}

@@ -6,6 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 import IdleTimeout from "@/components/IdleTimeout";
+import NotificationBell from "@/components/Notificationbell";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: "⛩", jp: "ダッシュボード" },
@@ -176,13 +177,16 @@ export default function AdminLayout({
           >
             Study<span className="text-[#d4a843]">Sync</span>
           </span>
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="text-[rgba(250,246,238,0.6)] text-xl p-1"
-          >
-            ☰
-          </button>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <button onClick={() => setMobileOpen(true)} className="text-[rgba(250,246,238,0.6)] text-xl p-1">☰</button>
+          </div>
         </header>
+
+        {/* Desktop top bar with bell */}
+        <div className="hidden lg:flex items-center justify-end gap-3 px-8 py-2.5 border-b border-[rgba(212,168,67,0.08)]">
+          <NotificationBell />
+        </div>
 
         <main className="flex-1 p-4 lg:p-8 max-w-7xl w-full mx-auto">
           {children}

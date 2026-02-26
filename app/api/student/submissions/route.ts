@@ -15,6 +15,9 @@ import { authOptions } from '@/lib/auth'
 import connectDB from '@/lib/db'
 import Submission from '@/models/Submission'
 import Project from '@/models/Project'
+import Subject from '@/models/Subject'
+import User from '@/models/User'
+import { createNotification } from '@/lib/notifications'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/student/submissions
@@ -80,10 +83,25 @@ export async function POST(req: NextRequest) {
     student: studentId,
     fileUrl: fileUrl || '',
     textResponse: textResponse || '',
-    submittedAt: isDraft ? null : new Date(), // no timestamp for drafts
+    submittedAt: isDraft ? null : new Date(),
     isLate,
-    status: isDraft ? 'draft' : 'submitted', // 'draft' or 'submitted'
+    status: isDraft ? 'draft' : 'submitted',
   })
+
+  // Notify the project's teacher that a submission was received (not for drafts)
+  if (!isDraft && project) {
+    const subject = await Subject.findById(project.subject)
+    if (subject?.teacher) {
+      const student = await User.findById(studentId, 'name')
+      await createNotification({
+        recipient: subject.teacher.toString(),
+        type:      'submission_received',
+        title:     '📥 New Submission',
+        message:   `${student?.name ?? 'A student'} submitted "${project.title}".`,
+        link:      '/teacher/students',
+      })
+    }
+  }
 
   return NextResponse.json(submission, { status: 201 })
 }
@@ -124,6 +142,22 @@ export async function PATCH(req: NextRequest) {
   }
 
   const updated = await Submission.findByIdAndUpdate(submissionId, update, { new: true })
+
+  // Notify teacher only when transitioning from draft → submitted
+  if (!isDraft && submission.status === 'draft' && project) {
+    const subject = await Subject.findById(project.subject)
+    if (subject?.teacher) {
+      const student = await User.findById(studentId, 'name')
+      await createNotification({
+        recipient: subject.teacher.toString(),
+        type:      'submission_received',
+        title:     '📥 Submission Received',
+        message:   `${student?.name ?? 'A student'} submitted "${project.title}".`,
+        link:      '/teacher/students',
+      })
+    }
+  }
+
   return NextResponse.json(updated)
 }
 
