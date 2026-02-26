@@ -19,6 +19,7 @@ const navItems = [
     icon: "🗂",
     jp: "プロジェクト",
   },
+  { href: '/admin/reports',  label: 'Reports',  icon: '📊', jp: 'レポート'     },
   { href: "/admin/profile", label: "Profile", icon: "⚙️", jp: "プロフィール" },
 ];
 

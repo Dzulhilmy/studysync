@@ -25,6 +25,7 @@ const navItems = [
     jp: "お知らせ",
   },
   { href: "/teacher/students", label: "Students", icon: "🎓", jp: "学生管理" },
+  { href: '/teacher/reports',       label: 'Reports',      icon: '📊',  jp: '月次報告書' },
   {
     href: "/teacher/profile",
     label: "Profile",
