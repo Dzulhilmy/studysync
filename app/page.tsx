@@ -748,7 +748,7 @@ export default function Home() {
                   { i:'🎨', n:'Tailwind CSS', d:'Utility-first' },
                   { i:'🔐', n:'NextAuth.js',  d:'JWT · Role sessions' },
                   { i:'☁️', n:'Vercel',       d:'Global edge deploy' },
-                  { i:'🖼', n:'Cloudinary',   d:'Media & files' },
+                  { i:'🖼', n:'Uploadthing',   d:'Media & files' },
                 ].map(t => (
                   <div key={t.n} style={{
                     background:'#fff', border:'1px solid #c8b89a',
