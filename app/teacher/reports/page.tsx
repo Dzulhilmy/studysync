@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import RealTimeClock from '@/components/RealTimeClock'
+import Link from 'next/link'
 
 const MONTHS = ['January','February','March','April','May','June',
                 'July','August','September','October','November','December']
@@ -104,6 +105,15 @@ export default function TeacherReportsPage() {
 
   return (
     <div>
+      <Link
+        href="/teacher"
+        className="inline-flex items-center gap-2 text-xs font-mono text-[#7a6a52] hover:text-[#88d4ab] mb-6 group transition-colors"
+      >
+        <span className="text-base leading-none group-hover:-translate-x-1 transition-transform">
+          ←
+        </span>
+        Back to Dashboard
+      </Link>
       {/* ── Header ── */}
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
