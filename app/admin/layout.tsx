@@ -62,7 +62,7 @@ export default function AdminLayout({
         bg-[#2c1810] border-r border-[rgba(212,168,67,0.15)]
         transition-transform duration-300
         ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
-        lg:translate-x-0 lg:static lg:z-auto
+        lg:translate-x-0 lg:sticky lg:z-auto
       `}
       >
         {/* Logo */}

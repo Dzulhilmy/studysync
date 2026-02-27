@@ -27,6 +27,10 @@ export default function UsersPage() {
   const [filterRole, setFilterRole] = useState("all");
   const [editUser, setEditUser] = useState<User | null>(null);
 
+  // --- NEW: Pagination States ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   async function loadUsers() {
     const res = await fetch("/api/admin/users");
     const data = await res.json();
@@ -37,6 +41,11 @@ export default function UsersPage() {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  // --- NEW: Reset to page 1 when searching or filtering ---
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterRole]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -80,6 +89,11 @@ export default function UsersPage() {
     const matchRole = filterRole === "all" || u.role === filterRole;
     return matchSearch && matchRole;
   });
+
+  // --- NEW: Calculate pagination variables ---
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedUsers = filtered.slice(startIndex, startIndex + itemsPerPage);
 
   const roleColor: Record<string, string> = {
     admin:
@@ -267,7 +281,7 @@ export default function UsersPage() {
                     Loading users...
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : paginatedUsers.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
@@ -277,7 +291,8 @@ export default function UsersPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((user) => (
+                // --- NEW: Changed filtered.map to paginatedUsers.map ---
+                paginatedUsers.map((user) => (
                   <tr
                     key={user._id}
                     className="border-b border-[#f0e9d6] hover:bg-[#faf6ee] transition-colors"
@@ -331,9 +346,33 @@ export default function UsersPage() {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-2 border-t border-[#f0e9d6] text-xs text-[#7a6a52] font-mono">
-          {filtered.length} user{filtered.length !== 1 ? "s" : ""} shown
+        
+        {/* --- NEW: Updated Footer with Pagination Controls --- */}
+        <div className="px-4 py-3 border-t border-[#f0e9d6] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#7a6a52] font-mono">
+          <span>
+            Showing {filtered.length === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + itemsPerPage, filtered.length)} of {filtered.length} user{filtered.length !== 1 ? "s" : ""}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1 || filtered.length === 0}
+              className="px-3 py-1.5 border border-[#c8b89a] rounded-sm hover:bg-[#f0e9d6] disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+            >
+              Prev
+            </button>
+            <span className="px-2">
+              Page {totalPages === 0 ? 0 : currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || filtered.length === 0}
+              className="px-3 py-1.5 border border-[#c8b89a] rounded-sm hover:bg-[#f0e9d6] disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+            >
+              Next
+            </button>
+          </div>
         </div>
+
       </div>
     </div>
   );
