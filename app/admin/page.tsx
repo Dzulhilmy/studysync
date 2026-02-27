@@ -54,7 +54,7 @@ export default function AdminDashboard() {
       {/* Page header */}
       <div className="mb-8">
         <p className="text-[#c0392b] text-xs font-mono tracking-[0.2em] uppercase mb-1">管理者ダッシュボード</p>
-        <h1 className="text-3xl font-bold text-[#1a1209] font-serif">Welcome back, {session?.user?.name?.split(' ')[0]} 👋</h1>
+        <h1 className="text-3xl font-bold text-[#1a1209] font-serif">Welcome back, {session?.user?.name?.split(' ')[1]} 👋</h1>
         <p className="text-[#7a6a52] text-sm mt-1">Here's what's happening in StudySync today.</p>
         <RealTimeClock accentColor="#d4a843" />
       </div>
