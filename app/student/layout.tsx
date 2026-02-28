@@ -76,7 +76,7 @@ export default function StudentLayout({
           bg-[#1a2535] border-r border-[rgba(212,168,67,0.12)]
           transition-transform duration-300
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:translate-x-0 lg:static lg:z-auto lg:self-stretch
+          lg:translate-x-0 lg:sticky lg:z-auto lg:self-stretch
         `}
       >
         {/* Logo */}
