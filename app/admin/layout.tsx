@@ -7,7 +7,6 @@ import Link from "next/link";
 import Image from "next/image";
 import IdleTimeout from "@/components/IdleTimeout";
 import NotificationBell from "@/components/Notificationbell";
-import DashboardSearch from "@/components/DashboardSearch";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: "⛩", jp: "ダッシュボード" },
@@ -178,7 +177,6 @@ export default function AdminLayout({
             Study<span className="text-[#d4a843]">Sync</span>
           </span>
           <div className="flex items-center gap-2">
-            <DashboardSearch role="admin" />
             <NotificationBell />
             <button onClick={() => setMobileOpen(true)} className="text-[rgba(250,246,238,0.6)] text-xl p-1">☰</button>
           </div>
