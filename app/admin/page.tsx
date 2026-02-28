@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import RealTimeClock from '@/components/RealTimeClock';
+import DashboardSearch from '@/components/DashboardSearch';
 
 interface Stats { users: number; teachers: number; students: number; subjects: number; projects: number; pending: number }
 
@@ -57,6 +58,7 @@ export default function AdminDashboard() {
         <h1 className="text-3xl font-bold text-[#1a1209] font-serif">Welcome back, {session?.user?.name?.split(' ')[1]} 👋</h1>
         <p className="text-[#7a6a52] text-sm mt-1">Here's what's happening in StudySync today.</p>
         <RealTimeClock accentColor="#d4a843" />
+        <DashboardSearch role="admin" />
       </div>
       
 

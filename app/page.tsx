@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import LandingSearch from '../components/LandingSearch'
 
 /* ═══════════════════════════════════════════
    SCROLL REVEAL
@@ -324,6 +325,10 @@ export default function Home() {
           <a href="#features" className="nl">Features</a>
           <a href="#roles"    className="nl">Roles</a>
           <a href="#stack"    className="nl">Stack</a>
+          {/* Search */}
+          <div className="desktop-nav">
+            <LandingSearch />
+          </div>
           <Link href="/login" style={{
             background:'linear-gradient(135deg,#d4a843,#b8882a)',
             color:'#1a1209', fontWeight:700, fontSize:'.68rem',
@@ -380,6 +385,10 @@ export default function Home() {
       }}
         className="mobile-menu">
         <nav style={{ padding:'1rem clamp(1.2rem,4vw,3rem) 1.5rem', display:'flex', flexDirection:'column', gap:4 }}>
+          {/* Search bar — mobile only */}
+          <div style={{ marginBottom: '0.5rem' }}>
+            <LandingSearch />
+          </div>
           {[
             { href:'#features', label:'Features' },
             { href:'#roles',    label:'Roles' },

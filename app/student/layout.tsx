@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import IdleTimeout from "@/components/IdleTimeout";
 import NotificationBell from "@/components/Notificationbell";
+import DashboardSearch from "@/components/DashboardSearch";
 
 const navItems = [
   { href: "/student", label: "Dashboard", icon: "🏠", jp: "ホーム" },
@@ -193,6 +194,7 @@ export default function StudentLayout({
           </span>
           <div className="flex items-center gap-2">
             <NotificationBell />
+            <DashboardSearch role="student" />
             <button
               onClick={() => setMobileOpen(true)}
               className="text-[rgba(250,246,238,0.6)] text-xl p-1"

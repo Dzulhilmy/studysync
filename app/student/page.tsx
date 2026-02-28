@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import RealTimeClock from '@/components/RealTimeClock'
+import DashboardSearch from '@/components/DashboardSearch'
 
 interface Submission {
   _id: string
@@ -77,6 +78,7 @@ export default function StudentDashboard() {
           Here's your learning activity at a glance.
         </p>
         <RealTimeClock accentColor="#63b3ed" />
+        <DashboardSearch role="student" />
       </div>
 
       {/* ⚠️ Deadline warnings */}

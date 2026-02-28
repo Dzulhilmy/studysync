@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import RealTimeClock from '@/components/RealTimeClock';
+import DashboardSearch from '@/components/DashboardSearch';
 
 interface Stats { subjects: number; projects: number; pending: number; approved: number; rejected: number; announcements: number }
 
@@ -69,6 +70,7 @@ export default function TeacherDashboard() {
         </h1>
         <p className="text-[#7a6a52] text-sm mt-1">Here's an overview of your teaching activity.</p>
         <RealTimeClock accentColor="#1a7a6e" />
+        <DashboardSearch role="teacher" />
       </div>
       
 
