@@ -179,14 +179,11 @@ export default function TeacherLayout({
         </div>
       </aside>
 
-      {/* ── MAIN ── */}
+       {/* ── MAIN ── */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile topbar */}
         <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-[#1a3a2a] border-b border-[rgba(26,122,110,0.2)]">
-          <span
-            className="text-[#faf6ee] font-bold"
-            style={{ fontFamily: "Georgia, serif" }}
-          >
+          <span className="text-[#faf6ee] font-bold" style={{ fontFamily: 'Georgia, serif' }}>
             Study<span className="text-[#d4a843]">Sync</span>
           </span>
           <div className="flex items-center gap-2">
@@ -195,12 +192,10 @@ export default function TeacherLayout({
           </div>
         </header>
 
-        {/* Desktop top bar with bell */}
-        <div className="hidden lg:flex items-center justify-end gap-3 px-8 py-2.5 border-b border-[rgba(26,122,110,0.1)]">
-          <NotificationBell />
-        </div>
-
-        <main className="flex-1 p-4 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 lg:p-8 max-w-7xl w-full mx-auto relative">
+          <div className="hidden lg:block fixed top-4 right-6 z-50">
+            <NotificationBell />
+          </div>
           {children}
         </main>
       </div>

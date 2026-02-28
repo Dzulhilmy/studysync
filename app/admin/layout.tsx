@@ -168,14 +168,12 @@ export default function AdminLayout({
         </div>
       </aside>
 
-      {/* ── MAIN ── */}
+       {/* ── MAIN ── */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-0">
+
         {/* Top navbar (mobile) */}
         <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-[#2c1810] border-b border-[rgba(212,168,67,0.15)]">
-          <span
-            className="text-[#faf6ee] font-bold"
-            style={{ fontFamily: "Georgia, serif" }}
-          >
+          <span className="text-[#faf6ee] font-bold" style={{ fontFamily: 'Georgia, serif' }}>
             Study<span className="text-[#d4a843]">Sync</span>
           </span>
           <div className="flex items-center gap-2">
@@ -184,12 +182,12 @@ export default function AdminLayout({
           </div>
         </header>
 
-        {/* Desktop top bar with bell */}
-        <div className="hidden lg:flex items-center justify-end gap-3 px-8 py-2.5 border-b border-[rgba(212,168,67,0.08)]">
-          <NotificationBell />
-        </div>
-
-        <main className="flex-1 p-4 lg:p-8 max-w-7xl w-full mx-auto">
+        {/* Page content */}
+        <main className="flex-1 p-4 lg:p-8 max-w-7xl w-full mx-auto relative">
+          {/* Bell floats top-right on desktop, hidden on mobile (mobile header has it) */}
+          <div className="hidden lg:block fixed top-4 right-6 z-50">
+            <NotificationBell />
+          </div>
           {children}
         </main>
       </div>
