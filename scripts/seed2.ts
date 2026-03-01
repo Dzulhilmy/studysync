@@ -3,11 +3,13 @@
  * StudySync — Seed Script #2
  * Seeds: Submissions, Announcements, Materials, Reports
  *
- * ⚠️  Run AFTER seed.js (requires existing Users, Subjects, Projects)
+ * ⚠️  Run AFTER seed.ts (requires existing Users, Subjects, Projects)
  *
  * Usage:
- *   node seed2.js
+ *   node seed2.ts
  */
+import { config } from "dotenv";
+config({ path: ".env.local" });
 
 require('dotenv').config()
 const mongoose = require('mongoose')
