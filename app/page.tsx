@@ -212,6 +212,26 @@ export default function Home() {
           from{transform:scaleX(0)}
           to  {transform:scaleX(1)}
         }
+        
+        /* Bouncy ball — gentle idle float after entry */
+        @keyframes bounce {
+          0%,100% { transform: translateY(0);    animation-timing-function: cubic-bezier(.33,0,.66,0) }
+          50%      { transform: translateY(-18px); animation-timing-function: cubic-bezier(.33,1,.66,1) }
+        }
+        @keyframes bounce2 {
+          0%,100% { transform: translateY(0);    animation-timing-function: cubic-bezier(.33,0,.66,0) }
+          50%      { transform: translateY(-14px); animation-timing-function: cubic-bezier(.33,1,.66,1) }
+        }
+        .bounce-study {
+          display: block;
+          animation: up .9s .3s cubic-bezier(.22,1,.36,1) both,
+          bounce  2.6s 1.4s ease-in-out infinite;
+        }
+        .bounce-sync {
+          display: block;
+          animation: up .9s .3s cubic-bezier(.22,1,.36,1) both,
+          bounce2 2.6s 1.85s ease-in-out infinite;
+        }
 
         .a1{animation:up .9s .1s cubic-bezier(.22,1,.36,1) both}
         .a2{animation:up .9s .3s cubic-bezier(.22,1,.36,1) both}
@@ -491,8 +511,8 @@ export default function Home() {
             lineHeight:.87, letterSpacing:'-.025em',
             marginBottom:'1.6rem',
           }}>
-            <span style={{ color:'#faf6ee', display:'block' }}>Study</span>
-            <span style={{ display:'block', color:'transparent', WebkitTextStroke:'2px #d4a843', textShadow:'0 0 100px rgba(212,168,67,.12)' }}>Sync</span>
+            <span className="bounce-study" style={{ color:'#faf6ee', display:'block' }}>Study</span>
+            <span className="bounce-sync" style={{ display:'block', color:'transparent', WebkitTextStroke:'2px #d4a843', textShadow:'0 0 100px rgba(212,168,67,.12)' }}>Sync</span>
           </h1>
 
           {/* Ornamental rule */}
