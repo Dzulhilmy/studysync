@@ -96,33 +96,70 @@ function SubmitBtn({ loading, children }: { loading: boolean; children: React.Re
   )
 }
 
+/* ── Strength indicator ───────────────────────────────── */
+function strengthOf(pw: string): { label: string; color: string; width: string } {
+  if (pw.length === 0) return { label: '', color: 'transparent', width: '0%' }
+  if (pw.length < 6)   return { label: 'Too short', color: '#c0392b', width: '20%' }
+  const has = {
+    upper: /[A-Z]/.test(pw),
+    lower: /[a-z]/.test(pw),
+    digit: /\d/.test(pw),
+    special: /[^A-Za-z0-9]/.test(pw),
+  }
+  const score = Object.values(has).filter(Boolean).length
+  if (score <= 1) return { label: 'Weak',   color: '#e07820', width: '35%' }
+  if (score === 2) return { label: 'Fair',   color: '#d4a843', width: '55%' }
+  if (score === 3) return { label: 'Good',   color: '#1a9a8a', width: '75%' }
+  return               { label: 'Strong', color: '#1a7a6e', width: '100%' }
+}
+
+function StrengthBar({ password }: { password: string }) {
+  const s = strengthOf(password)
+  if (!password) return null
+  return (
+    <div className="mt-2">
+      <div className="h-1 w-full bg-[rgba(212,168,67,0.1)] rounded-full overflow-hidden">
+        <div className="h-full rounded-full transition-all duration-500"
+          style={{ width: s.width, background: s.color }} />
+      </div>
+      <p className="text-[10px] font-mono mt-1 transition-colors" style={{ color: s.color }}>
+        {s.label}
+      </p>
+    </div>
+  )
+}
+
 /* ════════════════════════════════════════════════
    MAIN PAGE
 ════════════════════════════════════════════════ */
+type Mode = 'login' | 'forgot'
+
 export default function LoginPage() {
   const router = useRouter()
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [mode, setMode] = useState<Mode>('login')
 
   // Login fields
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
 
-  // Register fields
-  const [regName,     setRegName]     = useState('')
-  const [regEmail,    setRegEmail]    = useState('')
-  const [regPassword, setRegPassword] = useState('')
-  const [regConfirm,  setRegConfirm]  = useState('')
+  // Forgot password fields
+  const [fpEmail,      setFpEmail]      = useState('')
+  const [fpNew,        setFpNew]        = useState('')
+  const [fpConfirm,    setFpConfirm]    = useState('')
+  const [fpStep,       setFpStep]       = useState<'email' | 'reset'>('email')
+  const [fpVerified,   setFpVerified]   = useState(false)
 
   // Shared
   const [error,   setError]   = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
-  function switchMode(next: 'login' | 'register') {
+  function switchMode(next: Mode) {
     setMode(next)
     setError(''); setSuccess('')
     setEmail(''); setPassword('')
-    setRegName(''); setRegEmail(''); setRegPassword(''); setRegConfirm('')
+    setFpEmail(''); setFpNew(''); setFpConfirm('')
+    setFpStep('email'); setFpVerified(false)
   }
 
   /* ── Login ── */
@@ -139,40 +176,58 @@ export default function LoginPage() {
     }
   }
 
-  /* ── Register ── */
-  async function handleRegister(e: React.FormEvent) {
+  /* ── Forgot: Step 1 — verify email exists ── */
+  async function handleVerifyEmail(e: React.FormEvent) {
     e.preventDefault()
-    setError(''); setSuccess('')
-    if (regPassword !== regConfirm) { setError('Passwords do not match.'); return }
-    if (regPassword.length < 6)     { setError('Password must be at least 6 characters.'); return }
-
-    setLoading(true)
-    const res = await fetch('/api/auth/register', {
+    setError(''); setLoading(true)
+    // We'll try a dry-run against the reset endpoint
+    const res = await fetch('/api/auth/reset-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: regName, email: regEmail, password: regPassword }),
+      body: JSON.stringify({ email: fpEmail, checkOnly: true }),
     })
     const data = await res.json()
     setLoading(false)
-
     if (!res.ok) {
-      setError(data.error ?? 'Registration failed. Please try again.')
+      setError(data.error ?? 'Email not found.')
     } else {
-      setSuccess('Account created! Redirecting to sign in…')
-      setTimeout(() => switchMode('login'), 1800)
+      setFpVerified(true)
+      setFpStep('reset')
+      setError('')
     }
   }
 
-  const isLogin = mode === 'login'
+  /* ── Forgot: Step 2 — set new password ── */
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    if (fpNew !== fpConfirm)  { setError('Passwords do not match.'); return }
+    if (fpNew.length < 6)     { setError('Password must be at least 6 characters.'); return }
+    setLoading(true)
+    const res = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: fpEmail, newPassword: fpNew }),
+    })
+    const data = await res.json()
+    setLoading(false)
+    if (!res.ok) {
+      setError(data.error ?? 'Reset failed. Please try again.')
+    } else {
+      setSuccess('Password updated! Redirecting to sign in…')
+      setTimeout(() => switchMode('login'), 2000)
+    }
+  }
 
   return (
     <div suppressHydrationWarning className="min-h-screen bg-[#faf6ee] flex items-center justify-center p-4 relative overflow-hidden">
 
       {/* Back to home */}
       <Link href="/"
+        suppressHydrationWarning
         className="absolute top-6 left-6 z-20 inline-flex items-center gap-2 text-xs font-mono
           text-[#7a6a52] hover:text-[#1a1209] group transition-colors">
-        <span className="text-base leading-none group-hover:-translate-x-1 transition-transform inline-block">←</span>
+        <span suppressHydrationWarning className="text-base leading-none group-hover:-translate-x-1 transition-transform inline-block">←</span>
         Back to Home
       </Link>
 
@@ -211,14 +266,14 @@ export default function LoginPage() {
 
           {/* ── Mode tabs ── */}
           <div className="flex border-b border-[rgba(212,168,67,0.12)]">
-            {(['login', 'register'] as const).map(m => (
+            {(['login', 'forgot'] as const).map(m => (
               <button key={m} type="button" onClick={() => switchMode(m)}
                 className={`flex-1 py-3 text-xs font-mono tracking-widest uppercase transition-all ${
                   mode === m
                     ? 'text-[#d4a843] bg-[rgba(212,168,67,0.07)] border-b-2 border-[#d4a843]'
                     : 'text-[rgba(250,246,238,0.3)] hover:text-[rgba(250,246,238,0.55)] hover:bg-[rgba(255,255,255,0.02)]'
                 }`}>
-                {m === 'login' ? 'Sign In' : 'Register'}
+                {m === 'login' ? 'Sign In' : 'Forgot Password'}
               </button>
             ))}
           </div>
@@ -226,7 +281,7 @@ export default function LoginPage() {
           {/* ══════════════════════
               LOGIN FORM
           ══════════════════════ */}
-          {isLogin && (
+          {mode === 'login' && (
             <form onSubmit={handleLogin} className="px-8 py-7">
               {error && <ErrorBox msg={error} />}
 
@@ -239,83 +294,130 @@ export default function LoginPage() {
                     text-sm focus:outline-none focus:border-[#d4a843] transition-colors" />
               </div>
 
-              <div className="mb-6">
+              <div className="mb-2">
                 <Label>Password</Label>
                 <PasswordInput value={password} onChange={setPassword} />
+              </div>
+
+              {/* Forgot password shortcut link */}
+              <div className="mb-6 text-right">
+                <button type="button" onClick={() => switchMode('forgot')}
+                  className="text-[10px] font-mono text-[rgba(212,168,67,0.5)] hover:text-[#d4a843] transition-colors tracking-widest uppercase">
+                  Forgot password?
+                </button>
               </div>
 
               <SubmitBtn loading={loading}>
                 {loading ? 'Opening the book…' : 'Enter the Library'}
               </SubmitBtn>
-
-              <p className="text-center text-[rgba(250,246,238,0.22)] text-xs font-mono mt-5">
-                No account?{' '}
-                <button type="button" onClick={() => switchMode('register')}
-                  className="text-[#d4a843] hover:underline underline-offset-2 transition-colors">
-                  Register here
-                </button>
-              </p>
             </form>
           )}
 
           {/* ══════════════════════
-              REGISTER FORM
+              FORGOT PASSWORD
           ══════════════════════ */}
-          {!isLogin && (
-            <form onSubmit={handleRegister} className="px-8 py-7">
-              {error   && <ErrorBox   msg={error} />}
-              {success && <SuccessBox msg={success} />}
+          {mode === 'forgot' && (
+            <div className="px-8 py-7">
 
-              <div className="mb-4">
-                <Label>Full Name</Label>
-                <input type="text" value={regName} onChange={e => setRegName(e.target.value)}
-                  required placeholder="Ali Ahmad"
-                  className="w-full bg-[rgba(250,246,238,0.06)] border border-[rgba(212,168,67,0.2)]
-                    text-[#faf6ee] placeholder-[rgba(250,246,238,0.2)] rounded-sm px-3 py-2.5
-                    text-sm focus:outline-none focus:border-[#d4a843] transition-colors" />
+              {/* Step indicator */}
+              <div className="flex items-center gap-2 mb-6">
+                {['Verify Email', 'New Password'].map((label, i) => {
+                  const active  = fpStep === (i === 0 ? 'email' : 'reset')
+                  const done    = fpStep === 'reset' && i === 0
+                  return (
+                    <div key={label} className="flex items-center gap-2 flex-1">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 transition-colors ${
+                        done    ? 'bg-[#1a7a6e] text-white' :
+                        active  ? 'bg-[#d4a843] text-[#1a1209]' :
+                                  'bg-[rgba(212,168,67,0.1)] text-[rgba(250,246,238,0.2)]'
+                      }`}>
+                        {done ? '✓' : i + 1}
+                      </div>
+                      <span className={`text-[10px] font-mono tracking-wide uppercase transition-colors ${
+                        active ? 'text-[#d4a843]' : done ? 'text-[#1a9a8a]' : 'text-[rgba(250,246,238,0.2)]'
+                      }`}>{label}</span>
+                      {i === 0 && <div className="flex-1 h-px mx-1" style={{
+                        background: done ? '#1a7a6e' : 'rgba(212,168,67,0.1)'
+                      }} />}
+                    </div>
+                  )
+                })}
               </div>
 
-              <div className="mb-4">
-                <Label>Email</Label>
-                <input type="email" value={regEmail} onChange={e => setRegEmail(e.target.value)}
-                  required placeholder="you@school.edu"
-                  className="w-full bg-[rgba(250,246,238,0.06)] border border-[rgba(212,168,67,0.2)]
-                    text-[#faf6ee] placeholder-[rgba(250,246,238,0.2)] rounded-sm px-3 py-2.5
-                    text-sm focus:outline-none focus:border-[#d4a843] transition-colors" />
-              </div>
+              {/* ── Step 1: enter email ── */}
+              {fpStep === 'email' && (
+                <form onSubmit={handleVerifyEmail}>
+                  {error && <ErrorBox msg={error} />}
 
-              <div className="mb-4">
-                <Label>Password</Label>
-                <PasswordInput value={regPassword} onChange={setRegPassword}
-                  placeholder="Min. 6 characters" />
-              </div>
+                  <p className="text-[rgba(250,246,238,0.4)] text-xs font-mono mb-5 leading-relaxed">
+                    Enter the email address linked to your account. We'll let you set a new password.
+                  </p>
 
-              <div className="mb-6">
-                <Label>Confirm Password</Label>
-                <PasswordInput value={regConfirm} onChange={setRegConfirm}
-                  placeholder="Re-enter password" />
-              </div>
+                  <div className="mb-6">
+                    <Label>Email Address</Label>
+                    <input type="email" value={fpEmail} onChange={e => setFpEmail(e.target.value)}
+                      required placeholder="you@school.edu"
+                      className="w-full bg-[rgba(250,246,238,0.06)] border border-[rgba(212,168,67,0.2)]
+                        text-[#faf6ee] placeholder-[rgba(250,246,238,0.2)] rounded-sm px-3 py-2.5
+                        text-sm focus:outline-none focus:border-[#d4a843] transition-colors" />
+                  </div>
 
-              <SubmitBtn loading={loading}>
-                {loading ? 'Creating account…' : 'Create Account'}
-              </SubmitBtn>
+                  <SubmitBtn loading={loading}>
+                    {loading ? 'Checking…' : 'Continue →'}
+                  </SubmitBtn>
+                </form>
+              )}
 
-              <p className="text-center text-[rgba(250,246,238,0.22)] text-xs font-mono mt-5">
-                Already registered?{' '}
-                <button type="button" onClick={() => switchMode('login')}
-                  className="text-[#d4a843] hover:underline underline-offset-2 transition-colors">
-                  Sign in
-                </button>
-              </p>
-            </form>
+              {/* ── Step 2: set new password ── */}
+              {fpStep === 'reset' && (
+                <form onSubmit={handleResetPassword}>
+                  {error   && <ErrorBox   msg={error}   />}
+                  {success && <SuccessBox msg={success} />}
+
+                  <p className="text-[rgba(250,246,238,0.4)] text-xs font-mono mb-5 leading-relaxed">
+                    Account found for <span className="text-[#d4a843]">{fpEmail}</span>. Choose a new password below.
+                  </p>
+
+                  <div className="mb-4">
+                    <Label>New Password</Label>
+                    <PasswordInput value={fpNew} onChange={setFpNew} placeholder="Min. 6 characters" />
+                    <StrengthBar password={fpNew} />
+                  </div>
+
+                  <div className="mb-6">
+                    <Label>Confirm Password</Label>
+                    <PasswordInput value={fpConfirm} onChange={setFpConfirm} placeholder="Re-enter password" />
+                    {/* Match indicator */}
+                    {fpConfirm && (
+                      <p className={`text-[10px] font-mono mt-1.5 transition-colors ${
+                        fpNew === fpConfirm ? 'text-[#1a9a8a]' : 'text-[#c0392b]'
+                      }`}>
+                        {fpNew === fpConfirm ? '✓ Passwords match' : '✗ Passwords do not match'}
+                      </p>
+                    )}
+                  </div>
+
+                  <SubmitBtn loading={loading}>
+                    {loading ? 'Updating…' : '🔑 Update Password'}
+                  </SubmitBtn>
+
+                  {/* Back to step 1 */}
+                  <button type="button" onClick={() => { setFpStep('email'); setError(''); setFpNew(''); setFpConfirm('') }}
+                    className="w-full mt-3 py-2 text-[10px] font-mono text-[rgba(250,246,238,0.3)]
+                      hover:text-[rgba(250,246,238,0.6)] tracking-widest uppercase transition-colors">
+                    ← Use different email
+                  </button>
+                </form>
+              )}
+            </div>
           )}
 
           {/* Footer hint */}
           <div className="px-8 pb-5 text-center">
             <p className="text-[rgba(250,246,238,0.15)] text-xs font-mono">
-              {isLogin
+              {mode === 'login'
                 ? 'Contact your administrator for account access'
-                : 'New accounts require admin approval before login'}
+                : 'Password is overwritten immediately upon confirmation'}
             </p>
           </div>
         </div>
