@@ -1,5 +1,6 @@
 "use client";
 
+import RealTimeClock from "@/components/RealTimeClock";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -93,6 +94,7 @@ export default function AdminReportsPage() {
           Review submitted monthly reports from all teachers.
         </p>
       </div>
+      <RealTimeClock accentColor="#d4a843" />
 
       {loading ? (
         <div className="text-[#7a6a52] text-sm font-mono animate-pulse">
