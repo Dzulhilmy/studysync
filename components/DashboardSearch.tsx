@@ -233,8 +233,8 @@ export default function DashboardSearch({ role }: Props) {
                 onChange={e => { setQuery(e.target.value); setSel(0) }}
                 onKeyDown={onKey}
                 placeholder={`Search pages, actions…`}
-                className="flex-1 bg-transparent outline-none text-sm"
-                style={{ color: '#faf6ee', fontFamily: 'ui-monospace, monospace', letterSpacing: '.3px' }}
+                className="flex-1 bg-transparent outline-none text-sm dashboard-search-input"
+                style={{ color: '#f4f4f4', fontFamily: 'ui-monospace, monospace', letterSpacing: '.3px' }}
               />
               {query && (
                 <button onClick={() => setQuery('')}

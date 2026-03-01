@@ -24,3 +24,30 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ── Dark input text — only inside page content, not dark header components ── */
+main input,
+main textarea,
+main select {
+  color: #1a1209 !important;
+}
+
+main input::placeholder,
+main textarea::placeholder {
+  color: #a89880 !important;
+  opacity: 1;
+}
+
+main option {
+  color: #1a1209;
+  background: white;
+}
+
+/* ── Exception: Dashboard search palette input stays white ── */
+.dashboard-search-input {
+  color: #faf6ee !important;
+}
+
+.dashboard-search-input::placeholder {
+  color: rgba(250, 246, 238, 0.4) !important;
+}
