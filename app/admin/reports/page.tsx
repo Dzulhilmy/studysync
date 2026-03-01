@@ -93,8 +93,8 @@ export default function AdminReportsPage() {
         <p className="text-[#7a6a52] text-sm mt-1">
           Review submitted monthly reports from all teachers.
         </p>
+        <RealTimeClock accentColor="#d4a843" />
       </div>
-      <RealTimeClock accentColor="#d4a843" />
 
       {loading ? (
         <div className="text-[#7a6a52] text-sm font-mono animate-pulse">
