@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import FileUpload from '@/components/FileUpload'
 import RealTimeClock from '@/components/RealTimeClock'
+import  Link  from 'next/link'
 
 interface Material { _id: string; title: string; type: string; url: string; topic: string; createdAt: string; linkUrl?: string; fileUrl?: string }
 interface Subject { _id: string; name: string; code: string; description: string; students: any[]; materialCount: number }
@@ -110,6 +111,12 @@ export default function TeacherSubjectsPage() {
 
   return (
     <div>
+      {/* Back */}
+      <Link href="/teacher" suppressHydrationWarning
+        className="inline-flex items-center gap-2 text-xs font-mono text-[#4a3828] hover:text-[#1a7a6e] mb-6 group transition-colors">
+        <span suppressHydrationWarning className="text-base leading-none group-hover:-translate-x-1 transition-transform">←</span>
+        Back to Dashboard
+      </Link>
       {/* ── Header ── */}
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>

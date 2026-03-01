@@ -83,7 +83,13 @@ function GradingPanel({
   useEffect(() => {
     setLoading(true)
     fetch(`/api/teacher/students/submissions?studentId=${student._id}&subjectId=${subjectId}`)
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({}))
+          throw new Error(err.error ?? `HTTP ${r.status}`)
+        }
+        return r.json()
+      })
       .then((data: SubmissionRow[]) => {
         setRows(Array.isArray(data) ? data : [])
         const init: typeof inputs = {}
@@ -98,7 +104,10 @@ function GradingPanel({
         })
         setInputs(init)
       })
-      .catch(() => setRows([]))
+      .catch(err => {
+        console.error('[submissions]', err.message)
+        setRows([])
+      })
       .finally(() => setLoading(false))
   }, [student._id, subjectId])
 
