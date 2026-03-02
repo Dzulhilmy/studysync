@@ -76,6 +76,11 @@ function PrintPage() {
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
+        /* hide parent layout chrome */
+        aside { display: none !important; }
+        header { display: none !important; }
+        .a11y-panel, .a11y-handle, .accessibility-menu { display: none !important; }
+
         :root {
           --ink:      #1a1209;
           --gold:     #c8973e;
@@ -93,6 +98,11 @@ function PrintPage() {
           background: white;
           font-size: 10pt;
           line-height: 1.5;
+        }
+
+        @media print {
+          /* ensure header removed in PDF */
+          header { display: none !important; }
         }
 
         .page {
