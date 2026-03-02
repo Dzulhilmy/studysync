@@ -45,7 +45,7 @@ export const config = {
     '/subjects/:path*',
     '/projects/:path*',
     '/announcements/:path*',
-    'reports/:path*',
+    '/reports/:path*',
     '/profile/:path*',
   ],
 }
