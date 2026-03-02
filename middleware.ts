@@ -6,6 +6,11 @@ export default withAuth(
     const { pathname } = req.nextUrl
     const role = req.nextauth.token?.role as string
 
+    // Allow print pages without role restrictions (accessible to any authenticated user)
+    if (pathname.includes('/print')) {
+      return NextResponse.next()
+    }
+
     // Role-based route guards
     if (pathname.startsWith('/admin')   && role !== 'admin')   {
       return NextResponse.redirect(new URL('/login', req.url))

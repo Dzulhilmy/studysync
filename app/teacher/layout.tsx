@@ -71,7 +71,7 @@ export default function TeacherLayout({
         bg-[#1a3a2a] border-r border-[rgba(26,122,110,0.2)]
         transition-transform duration-300
         ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
-        lg:translate-x-0 lg:static lg:z-auto
+        lg:translate-x-0 lg:sticky lg:z-auto
       `}
       >
         {/* Logo */}
