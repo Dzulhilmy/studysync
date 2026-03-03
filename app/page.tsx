@@ -2285,9 +2285,12 @@ export default function Home() {
                   <Link
                     href={r.href}
                     style={{
-                      display: "block",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.4rem",
+
                       marginTop: "auto",
-                      textAlign: "center",
                       padding: ".72rem",
                       borderRadius: 2,
                       border: `1px solid ${r.border}`,
@@ -2298,6 +2301,7 @@ export default function Home() {
                       textTransform: "uppercase",
                       fontFamily: "Share Tech Mono",
                       textDecoration: "none",
+
                       transition: "background .2s, transform .18s",
                     }}
                     onMouseEnter={(e) => {
@@ -2309,7 +2313,8 @@ export default function Home() {
                       e.currentTarget.style.transform = "";
                     }}
                   >
-                    Sign in as {r.role} <IconArrowRight size={12} />
+                    <span>Sign in as {r.role}</span>
+                    <IconArrowRight size={12} />
                   </Link>
                 </div>
               </Rise>
