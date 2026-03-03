@@ -1,66 +1,47 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
-import Link from "next/link";
-import Image from "next/image";
-import IdleTimeout from "@/components/IdleTimeout";
-import NotificationBell from "@/components/Notificationbell";
+import { useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { signOut, useSession } from 'next-auth/react'
+import Link from 'next/link'
+import NotificationBell from '@/components/Notificationbell'
+import IdleTimeout from '@/components/IdleTimeout'
+import {
+  IconHome, IconSubjects, IconProjects, IconAnnouncements,
+  IconClassmates, IconProfile, IconSignOut, IconMenu,
+} from '@/components/NavIcons'
 
 const navItems = [
-  { href: "/student", label: "Dashboard", icon: "🏠", jp: "ホーム" },
-  { href: "/student/subjects", label: "Subjects", icon: "📚", jp: "科目" },
-  {
-    href: "/student/projects",
-    label: "Projects",
-    icon: "📝",
-    jp: "プロジェクト",
-  },
-  {
-    href: "/student/announcements",
-    label: "Announcements",
-    icon: "📢",
-    jp: "お知らせ",
-  },
-  {
-    href: "/student/classmates",
-    label: "Classmates",
-    icon: "👥",
-    jp: "クラスメート",
-  },
-  {
-    href: "/student/profile",
-    label: "Profile",
-    icon: "⚙️",
-    jp: "プロフィール",
-  },
-];
+  { href: '/student',               label: 'Dashboard',     Icon: IconHome,          jp: 'HOME' },
+  { href: '/student/subjects',      label: 'Subjects',      Icon: IconSubjects,      jp: 'SUBJECTS' },
+  { href: '/student/projects',      label: 'Projects',      Icon: IconProjects,      jp: 'PROJECTS' },
+  { href: '/student/announcements', label: 'Announcements', Icon: IconAnnouncements, jp: 'NOTICES' },
+  { href: '/student/classmates',    label: 'Classmates',    Icon: IconClassmates,    jp: 'CLASSMATES' },
+  { href: '/student/profile',       label: 'Profile',       Icon: IconProfile,       jp: 'PROFILE' },
+]
 
-export default function StudentLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { data: session } = useSession();
-  const [mobileOpen, setMobileOpen] = useState(false);
+export default function StudentLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const { data: session } = useSession()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleLogout = async () => {
-    await signOut({ redirect: false });
-    router.push("/login");
-  };
+    // callbackUrl sends NextAuth's own redirect — browser history is replaced
+    // so the back button cannot return to a protected page after logout
+    await signOut({ callbackUrl: '/login', redirect: true })
+  }
 
   return (
     <div
       className="min-h-screen flex items-stretch bg-[#faf6ee]"
       style={{
         backgroundImage:
-          "repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(200,184,154,0.12) 28px)",
+          'repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(200,184,154,0.12) 28px)',
       }}
     >
       <IdleTimeout />
+
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
@@ -75,8 +56,8 @@ export default function StudentLayout({
           fixed top-0 left-0 h-full min-h-screen w-64 z-50 flex flex-col
           bg-[#1a2535] border-r border-[rgba(212,168,67,0.12)]
           transition-transform duration-300
-          ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:translate-x-0 lg:sticky lg:z-auto lg:self-stretch
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:translate-x-0 lg:static lg:z-auto lg:self-stretch
         `}
       >
         {/* Logo */}
@@ -84,79 +65,72 @@ export default function StudentLayout({
           <div className="text-[rgba(212,168,67,0.4)] text-[10px] font-mono tracking-[0.3em] uppercase mb-2">
             学生パネル
           </div>
-          {/* 1. Main Parent Wrapper: flex-col forces the items to stack vertically */}
-          <div className="flex flex-col items-start gap-2">
-            {/* 2. Top Row: The two logos side-by-side */}
-            <div className="flex items-center gap-3">
-              {/* Crest Logo */}
-              <div className="w-12 h-12 flex-shrink-0">
-                <Image
-                  src="/Image_Logo.png"
-                  alt="StudySync Crest"
-                  width={40}
-                  height={40}
-                  style={{ objectFit: "contain" }}
-                />
-              </div>
-
-              {/* Text Logo */}
-              <div className="flex-shrink-0">
-                <Image
-                  src="/Text_Logo.png"
-                  alt="StudySync"
-                  width={80}
-                  height={40}
-                  style={{ objectFit: "contain" }}
-                />
-              </div>
+          <div className="flex items-center gap-3">
+            {/* LOGO PLACEHOLDER — replace with <img src="/logo.png" className="w-9 h-9 rounded" /> */}
+            <div className="w-9 h-9 rounded-sm overflow-hidden flex-shrink-0 border border-[rgba(212,168,67,0.25)]">
+              <svg viewBox="0 0 36 36" width="36" height="36" xmlns="http://www.w3.org/2000/svg">
+                <rect width="36" height="36" fill="#1c1108"/>
+                <rect x="7"  y="21" width="22" height="4" rx="1" fill="#d4a843" opacity="0.9"/>
+                <rect x="9"  y="15.5" width="18" height="4" rx="1" fill="#d4a843" opacity="0.65"/>
+                <rect x="11" y="10" width="14" height="4" rx="1" fill="#d4a843" opacity="0.4"/>
+                <rect x="7"  y="21" width="2.5" height="4" rx="0.5" fill="#c0392b" opacity="0.85"/>
+                <rect x="9"  y="15.5" width="2.5" height="4" rx="0.5" fill="#c0392b" opacity="0.6"/>
+                <rect x="11" y="10" width="2.5" height="4" rx="0.5" fill="#c0392b" opacity="0.4"/>
+              </svg>
             </div>
-
-            {/* 3. Bottom Row: The Portal Text */}
-            <div className="text-[rgba(99,179,237,0.4)] text-[10px] font-mono tracking-[0.3em] mt-0.5">
-              Student Portal
+            <div>
+              <div
+                className="text-[#faf6ee] text-xl font-bold"
+                style={{ fontFamily: 'Georgia, serif' }}
+              >
+                Study<span className="text-[#d4a843]">Sync</span>
+              </div>
+              <div className="text-[rgba(99,179,237,0.4)] text-[10px] font-mono tracking-widest mt-0.5">
+                Student Portal
+              </div>
             </div>
           </div>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {navItems.map((item) => {
+          {navItems.map(({ href, label, Icon, jp }) => {
             const active =
-              item.href === "/student"
-                ? pathname === "/student"
-                : pathname.startsWith(item.href);
+              href === '/student'
+                ? pathname === '/student'
+                : pathname.startsWith(href)
             return (
               <Link
-                key={item.href}
-                href={item.href}
+                key={href}
+                href={href}
                 onClick={() => setMobileOpen(false)}
                 className={`
                   flex items-center gap-3 px-4 py-2.5 rounded-sm group transition-all duration-150
-                  ${
-                    active
-                      ? "bg-[rgba(99,179,237,0.12)] border border-[rgba(99,179,237,0.25)]"
-                      : "hover:bg-[rgba(250,246,238,0.04)] border border-transparent"
+                  ${active
+                    ? 'bg-[rgba(99,179,237,0.12)] border border-[rgba(99,179,237,0.25)]'
+                    : 'hover:bg-[rgba(250,246,238,0.04)] border border-transparent'
                   }
                 `}
               >
-                <span className="text-base w-5 text-center">{item.icon}</span>
+                <span className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
+                  <Icon size={18} color={active ? '#63b3ed' : 'rgba(250,246,238,0.5)'} />
+                </span>
                 <div className="flex-1 min-w-0">
                   <div
                     className={`text-sm font-semibold truncate ${
-                      active ? "text-[#63b3ed]" : "text-[rgba(250,246,238,0.6)]"
+                      active ? 'text-[#63b3ed]' : 'text-[rgba(250,246,238,0.6)]'
                     }`}
+                    style={{ fontFamily: 'Georgia, serif' }}
                   >
-                    {item.label}
+                    {label}
                   </div>
                   <div className="text-[10px] font-mono text-[rgba(99,179,237,0.3)] truncate">
-                    {item.jp}
+                    {jp}
                   </div>
                 </div>
-                {active && (
-                  <div className="w-1 h-1 rounded-full bg-[#63b3ed]" />
-                )}
+                {active && <div className="w-1.5 h-1.5 rounded-full bg-[#63b3ed] flex-shrink-0" />}
               </Link>
-            );
+            )
           })}
         </nav>
 
@@ -164,22 +138,20 @@ export default function StudentLayout({
         <div className="p-4 border-t border-[rgba(212,168,67,0.1)]">
           <div className="flex items-center gap-3 mb-3 px-2">
             <div className="w-8 h-8 rounded-sm bg-[rgba(99,179,237,0.15)] border border-[rgba(99,179,237,0.3)] flex items-center justify-center text-[#63b3ed] text-sm font-bold">
-              {session?.user?.name?.[0] ?? "S"}
+              {session?.user?.name?.[0] ?? 'S'}
             </div>
             <div className="min-w-0">
               <div className="text-[rgba(250,246,238,0.8)] text-xs font-semibold truncate">
                 {session?.user?.name}
               </div>
-              <div className="text-[rgba(99,179,237,0.4)] text-[10px] font-mono">
-                Student
-              </div>
+              <div className="text-[rgba(99,179,237,0.4)] text-[10px] font-mono">Student</div>
             </div>
           </div>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-4 py-2 text-[rgba(192,57,43,0.7)] hover:text-[#c0392b] hover:bg-[rgba(192,57,43,0.08)] rounded-sm transition-all text-xs font-semibold border border-transparent hover:border-[rgba(192,57,43,0.2)]"
           >
-            <span>⏻</span> Sign Out
+            <IconSignOut size={15} color="currentColor" /> Sign Out
           </button>
         </div>
       </aside>
@@ -195,9 +167,10 @@ export default function StudentLayout({
             <NotificationBell />
             <button
               onClick={() => setMobileOpen(true)}
-              className="text-[rgba(250,246,238,0.6)] text-xl p-1"
+              className="p-1"
+              aria-label="Open menu"
             >
-              ☰
+              <IconMenu size={20} color="rgba(250,246,238,0.6)" />
             </button>
           </div>
         </header>
@@ -210,5 +183,5 @@ export default function StudentLayout({
         </main>
       </div>
     </div>
-  );
+  )
 }
