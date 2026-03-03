@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { ScanSearch } from 'lucide-react'
 
 // ── Search index per role ──────────────────────────────────────────────────
 
@@ -200,7 +201,22 @@ export default function DashboardSearch({ role }: Props) {
           color: 'rgba(255,255,255,0.5)',
         }}
       >
-        <span style={{ color: style.accent }}>🔍</span>
+        <span style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background:
+              open || query
+                ? "rgba(237, 171, 41, 0.64)"
+                : "rgba(219, 174, 25, 0.73)",
+            border: `1px solid ${open || query ? "rgba(212, 168, 67, 0.23)" : "transparent"}`,
+            borderRadius: 4,
+            padding: "6px 10px",
+            transition: "border-color .2s, background .2s",
+            // NOTE: NO backdropFilter here — that was breaking fixed positioning
+          }}><ScanSearch
+            size={18}
+          /></span>
         <span className="hidden sm:inline">Search...</span>
         <span className="hidden sm:flex items-center gap-1 ml-1 px-1.5 py-0.5 rounded text-[10px]"
           style={{ background: 'rgba(255,255,255,0.06)', border: `1px solid ${style.border}`, color: style.accent }}>
@@ -226,7 +242,22 @@ export default function DashboardSearch({ role }: Props) {
             {/* Search input */}
             <div className="flex items-center gap-3 px-4 py-3.5 border-b"
               style={{ borderColor: style.border }}>
-              <span style={{ color: style.accent, fontSize: 16 }}>🔍</span>
+              <span style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background:
+              open || query
+                ? "rgba(0, 0, 0, 0.16)"
+                : "rgba(0, 0, 0, 0.1)",
+            border: `1px solid ${open || query ? "transparent" : "rgba(212, 168, 67, 0.09)"}`,
+            borderRadius: 4,
+            padding: "6px 10px",
+            transition: "border-color .2s, background .2s",
+            // NOTE: NO backdropFilter here — that was breaking fixed positioning
+          }}><ScanSearch
+            size={18}
+          /></span>
               <input
                 ref={inputRef}
                 value={query}
