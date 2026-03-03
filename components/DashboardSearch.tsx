@@ -211,7 +211,7 @@ export default function DashboardSearch({ role }: Props) {
       {/* ── Modal overlay ── */}
       {open && (
         <div
-          className="fixed inset-0 z-[200] flex items-start justify-center pt-[12vh]"
+          className="fixed inset-0 z-[200] flex items-start justify-center pt-[5vh] sm:pt-[12vh] px-3 sm:px-0"
           style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
           onMouseDown={e => { if (e.target === e.currentTarget) setOpen(false) }}
         >
@@ -233,8 +233,8 @@ export default function DashboardSearch({ role }: Props) {
                 onChange={e => { setQuery(e.target.value); setSel(0) }}
                 onKeyDown={onKey}
                 placeholder={`Search pages, actions…`}
-                className="flex-1 bg-transparent outline-none text-sm dashboard-search-input"
-                style={{ color: '#f4f4f4', fontFamily: 'ui-monospace, monospace', letterSpacing: '.3px' }}
+                className="flex-1 bg-transparent outline-none text-sm"
+                style={{ color: '#faf6ee', fontFamily: 'ui-monospace, monospace', letterSpacing: '.3px' }}
               />
               {query && (
                 <button onClick={() => setQuery('')}
@@ -246,7 +246,7 @@ export default function DashboardSearch({ role }: Props) {
             </div>
 
             {/* Results */}
-            <div className="overflow-y-auto" style={{ maxHeight: 380 }}>
+            <div className="overflow-y-auto" style={{ maxHeight: 'min(380px, 55vh)' }}>
               {results.length === 0 && query ? (
                 <div className="px-5 py-10 text-center">
                   <div className="text-3xl mb-2">🔎</div>
