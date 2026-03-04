@@ -392,7 +392,38 @@ export function IconClipboard({ color = 'currentColor', size = 14 }: IconProps) 
   )
 }
 
-// ── Inbox arrow — received/submitted ─────────────────────────────────────────
+// ── Clock — time / deadline ───────────────────────────────────────────────────
+export function IconClock({ color = 'currentColor', size = 16 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      {/* Face */}
+      <circle cx="8" cy="8" r="6.5" stroke={color} strokeWidth="1.4" fill="none"/>
+      {/* Hour hand */}
+      <line x1="8" y1="8" x2="8" y2="4" stroke={color} strokeWidth="1.6" strokeLinecap="round"/>
+      {/* Minute hand */}
+      <line x1="8" y1="8" x2="11" y2="10" stroke={color} strokeWidth="1.4" strokeLinecap="round"/>
+      {/* Centre dot */}
+      <circle cx="8" cy="8" r="1" fill={color}/>
+      {/* Tick marks at 12, 3, 6, 9 */}
+      <line x1="8"    y1="2"    x2="8"    y2="3.2"  stroke={color} strokeWidth="1.2" strokeLinecap="round" opacity="0.4"/>
+      <line x1="14"   y1="8"    x2="12.8" y2="8"    stroke={color} strokeWidth="1.2" strokeLinecap="round" opacity="0.4"/>
+      <line x1="8"    y1="14"   x2="8"    y2="12.8" stroke={color} strokeWidth="1.2" strokeLinecap="round" opacity="0.4"/>
+      <line x1="2"    y1="8"    x2="3.2"  y2="8"    stroke={color} strokeWidth="1.2" strokeLinecap="round" opacity="0.4"/>
+    </svg>
+  )
+}
+
+// ── Paperclip — file attachment link ─────────────────────────────────────────
+export function IconAttach({ color = 'currentColor', size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+      <path d="M11.5 6.5 L6 12 Q4 14 2 12 Q0 10 2 8 L8 2 Q9.5 0.5 11 2 Q12.5 3.5 11 5 L5.5 10.5 Q4.5 11.5 3.5 10.5 Q2.5 9.5 3.5 8.5 L8.5 3.5"
+        stroke={color} strokeWidth="1.3" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+// ── Inbox / mailbox — no submissions empty state ──────────────────────────────
 export function IconInbox({ color = 'currentColor', size = 16 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">

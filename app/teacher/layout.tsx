@@ -4,7 +4,9 @@ import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import Link from 'next/link'
+import Image from 'next/image'
 import NotificationBell from '@/components/Notificationbell'
+import DashboardSearch from '@/components/DashboardSearch'
 import IdleTimeout from '@/components/IdleTimeout'
 import {
   IconDashboard, IconSubjects, IconProjects, IconAnnouncements,
@@ -43,26 +45,30 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
 
         {/* Logo */}
         <div className="px-6 pt-7 pb-5 border-b border-[rgba(26,122,110,0.15)]">
-          <div className="text-[rgba(212,168,67,0.4)] text-[10px] font-mono tracking-[0.3em] uppercase mb-2">monthly report</div>
+          <div className="text-[rgba(212,168,67,0.4)] text-[10px] font-mono tracking-[0.3em] uppercase mb-2">
+            教師パネル
+          </div>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-sm overflow-hidden flex-shrink-0 border border-[rgba(212,168,67,0.25)]">
-              <svg viewBox="0 0 36 36" width="36" height="36">
-                <rect width="36" height="36" fill="#1c2e1e"/>
-                <rect x="7" y="21" width="22" height="4" rx="1" fill="#d4a843" opacity="0.9"/>
-                <rect x="9" y="15.5" width="18" height="4" rx="1" fill="#d4a843" opacity="0.65"/>
-                <rect x="11" y="10" width="14" height="4" rx="1" fill="#d4a843" opacity="0.4"/>
-                <rect x="7" y="21" width="2.5" height="4" rx="0.5" fill="#1a7a6e" opacity="0.9"/>
-                <rect x="9" y="15.5" width="2.5" height="4" rx="0.5" fill="#1a7a6e" opacity="0.65"/>
-                <rect x="11" y="10" width="2.5" height="4" rx="0.5" fill="#1a7a6e" opacity="0.4"/>
-              </svg>
+            <div className="w-12 h-12 flex-shrink-0">
+              <Image
+                src="/Image_Logo.png"
+                alt="StudySync Crest"
+                width={40}
+                height={40}
+                style={{ objectFit: 'contain' }}
+              />
             </div>
-            <div>
-              <div className="text-[#faf6ee] text-xl font-bold" style={{ fontFamily: 'Georgia, serif' }}>
-                Study<span className="text-[#d4a843]">Sync</span>
-              </div>
-              <div className="text-[rgba(26,122,110,0.5)] text-[10px] font-mono tracking-widest mt-0.5">Teacher Panel</div>
+            <div className="flex-shrink-0">
+              <Image
+                src="/Text_Logo.png"
+                alt="StudySync"
+                width={80}
+                height={40}
+                style={{ objectFit: 'contain' }}
+              />
             </div>
           </div>
+          <div className="text-[rgba(26,122,110,0.5)] text-[10px] font-mono tracking-widest mt-2">Teacher Panel</div>
         </div>
 
         {/* Nav */}
@@ -109,6 +115,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         <header className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-[#1a3a2a] border-b border-[rgba(26,122,110,0.2)]">
           <span className="text-[#faf6ee] font-bold" style={{ fontFamily: 'Georgia, serif' }}>Study<span className="text-[#d4a843]">Sync</span></span>
           <div className="flex items-center gap-2">
+            <DashboardSearch role="teacher" />
             <NotificationBell />
             <button onClick={() => setMobileOpen(true)} className="p-1" aria-label="Open menu">
               <IconMenu size={20} color="rgba(250,246,238,0.6)" />

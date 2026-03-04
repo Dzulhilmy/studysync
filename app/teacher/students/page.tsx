@@ -7,6 +7,8 @@ import {
   IconClose, IconWarning, IconApproved, IconSubmitted,
   IconSave, IconPending, IconGrade, IconArrowLeft, IconInbox,
   IconTrophy, IconCalendar, IconEmpty, IconStudents,
+  IconAttach,
+  IconClock,
 } from '@/components/NavIcons'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -188,7 +190,7 @@ function GradingPanel({
               </div>
               <div>
                 <div className="font-bold text-[#faf6ee] text-sm" style={{ fontFamily: 'Georgia, serif' }}>
-                  {student.name}
+                  <IconStudents color="currentColor" size={14} /> {student.name}
                 </div>
                 <div className="text-[11px] font-mono" style={{ color: 'rgba(250,246,238,0.45)' }}>
                   {student.email}
@@ -276,7 +278,7 @@ function GradingPanel({
                                 {sub.isLate && (
                                   <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-sm"
                                     style={{ border: '1px solid rgba(192,57,43,0.3)', color: '#c0392b', background: 'rgba(192,57,43,0.05)' }}>
-                                    ⏰ Late
+                                    <IconClock size={12} color="currentColor" /> Late
                                   </span>
                                 )}
                                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-sm"
@@ -314,7 +316,8 @@ function GradingPanel({
                               {sub.fileUrl && (
                                 <a href={sub.fileUrl} target="_blank" rel="noreferrer"
                                   className="inline-flex items-center gap-1.5 text-[11px] font-mono text-[#1a7a6e] hover:underline">
-                                  📎 View submitted file
+                                  <IconAttach size={11} color="#1a7a6e" />
+                                  View submitted file
                                 </a>
                               )}
                             </div>
