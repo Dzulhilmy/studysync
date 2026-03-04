@@ -41,7 +41,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       {mobileOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setMobileOpen(false)} />}
 
       {/* SIDEBAR */}
-      <aside className={`fixed top-0 left-0 h-full w-64 z-50 flex flex-col bg-[#1a3a2a] border-r border-[rgba(26,122,110,0.2)] transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static lg:z-auto`}>
+      <aside className={`fixed top-0 left-0 h-full min-h-screen w-64 z-50 flex flex-col bg-[#1a3a2a] border-r border-[rgba(26,122,110,0.2)] transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static lg:z-auto`}>
 
         {/* Logo */}
         <div className="px-6 pt-7 pb-5 border-b border-[rgba(26,122,110,0.15)]">
