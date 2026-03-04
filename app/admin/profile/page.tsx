@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import RealTimeClock from "@/components/RealTimeClock";
+import { IconCheck } from '@/components/NavIcons'
 
 export default function ProfilePage() {
   const { data: session, update } = useSession();
@@ -110,7 +111,7 @@ export default function ProfilePage() {
             )}
             {success && (
               <div className="text-[#1a7a6e] text-xs bg-[rgba(26,122,110,0.08)] border border-[rgba(26,122,110,0.2)] px-3 py-2 rounded-sm">
-                ✓ {success}
+                <IconCheck size={12} color="#1a7a6e" /> {success}
               </div>
             )}
 

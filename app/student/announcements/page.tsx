@@ -2,8 +2,15 @@
 
 import Link from 'next/link'
 import RealTimeClock from '@/components/RealTimeClock'
-
-import { useEffect, useState } from 'react'
+import {
+  IconBell, IconApproved, IconRejected, IconClipboard,
+  IconClose, IconArrowRight,
+  IconWarning,
+  IconTrophy,
+  IconCalendar,
+  IconProfile,
+} from '@/components/NavIcons'
+import { JSX, useEffect, useState } from 'react'
 
 interface Announcement {
   _id: string; title: string; content: string
@@ -16,10 +23,10 @@ interface Notification {
   link: string; isRead: boolean; createdAt: string
 }
 
-const TYPE_ICON: Record<string, string> = {
-  project_approved: '✅', project_rejected: '❌', project_published: '📋',
-  submission_received: '📥', submission_graded: '🏆',
-  deadline_warning: '⏰', announcement_posted: '📢',
+const TYPE_ICON: Record<string, (props:{size?:number,color?:string})=>JSX.Element> = {
+  project_approved: IconApproved, project_rejected: IconRejected, project_published: IconClipboard,
+  submission_received: IconClipboard, submission_graded: IconTrophy,
+  deadline_warning: IconWarning, announcement_posted: () => <>📢</>,
 }
 function timeAgo(d: string) {
   const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000)
@@ -134,7 +141,7 @@ export default function StudentAnnouncementsPage() {
       <div className="flex gap-1 bg-[#f0e9d6] p-1 rounded-sm w-fit mb-6">
         {([
           { key: 'announcements', label: '📢 Announcements', badge: unreadAnnouncements },
-          { key: 'notifications', label: '🔔 Notifications',  badge: unreadNotifs },
+          { key: 'notifications', label: ' Notifications', Icon:IconBell,  badge: unreadNotifs },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`relative px-4 py-2 text-xs font-mono uppercase tracking-wider rounded-sm transition-all flex items-center gap-2 ${
@@ -191,8 +198,8 @@ export default function StudentAnnouncementsPage() {
                               </div>
                               <h3 className="font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>{a.title}</h3>
                               <div className="flex gap-3 mt-1 text-xs text-[#7a6a52] font-mono">
-                                <span>👤 {a.author?.name}</span>
-                                <span>📅 {new Date(a.createdAt).toLocaleDateString()}</span>
+                                <span><IconProfile size={12} color="currentColor" /> {a.author?.name}</span>
+                                <span><IconCalendar size={12} color="currentColor" /> {new Date(a.createdAt).toLocaleDateString()}</span>
                               </div>
                             </div>
                             <span className="text-[#7a6a52] text-lg shrink-0 mt-1">{isExpanded ? '▲' : '▼'}</span>
@@ -234,7 +241,7 @@ export default function StudentAnnouncementsPage() {
 
               {notifications.length === 0 ? (
                 <div className="bg-white border border-[#c8b89a] rounded-sm p-12 text-center shadow-[3px_3px_0_#c8b89a]">
-                  <div className="text-4xl mb-3">🔔</div>
+                  <div className="text-4xl mb-3"><IconBell size={40} color="#c8b89a" /></div>
                   <p className="text-[#7a6a52] text-sm">No notifications yet.</p>
                 </div>
               ) : (
@@ -244,7 +251,7 @@ export default function StudentAnnouncementsPage() {
                       className={`bg-white border rounded-sm shadow-[2px_2px_0_#c8b89a] transition-all flex items-start gap-4 px-5 py-4 group ${
                         !n.isRead ? 'border-l-4 border-l-[#63b3ed] border-[#c8b89a]' : 'border-[#c8b89a]'
                       }`}>
-                      <span className="text-xl shrink-0 mt-0.5">{TYPE_ICON[n.type] ?? '🔔'}</span>
+                      <span className="text-xl shrink-0 mt-0.5">{(TYPE_ICON[n.type] ?? IconBell)({ size: 20, color: 'currentColor' })}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <h3 className={`font-bold text-sm ${!n.isRead ? 'text-[#1a1209]' : 'text-[#7a6a52]'}`}
@@ -263,14 +270,14 @@ export default function StudentAnnouncementsPage() {
                             </button>
                           )}
                           <a href={n.link}
-                            className="text-xs font-mono text-[#1a7a6e] hover:underline underline-offset-2 ml-auto">
-                            Go to page →
+                            className="text-xs font-mono text-[#1a7a6e] hover:underline underline-offset-2 ml-autoflex items-center gap-1">
+                              Go to page <IconArrowRight size={10} color="currentColor" />
                           </a>
                         </div>
                       </div>
                       <button onClick={() => dismissNotif(n._id)}
                         className="text-[#c8b89a] hover:text-[#c0392b] text-sm opacity-0 group-hover:opacity-100 transition-all shrink-0 px-1">
-                        ✕
+                        <IconClose size={12} color="currentColor" />
                       </button>
                     </div>
                   ))}

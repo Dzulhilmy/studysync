@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import RealTimeClock from '@/components/RealTimeClock';
+import {
+  IconDraft, IconSubmitted, IconApproved, IconWarning,
+  IconClose, IconTrash, IconSave, IconRefresh, IconCalendar, IconTrophy
+} from '@/components/NavIcons'
 
 interface Subject { _id: string; name: string; code: string }
 interface Submission {
@@ -21,7 +25,7 @@ const STATUS_STYLE: Record<string, string> = {
   graded:    'text-[#d4a843] bg-[rgba(212,168,67,0.08)] border-[rgba(212,168,67,0.3)]',
 }
 const STATUS_LABEL: Record<string, string> = {
-  draft: '✏️ Draft', submitted: '📤 Submitted', graded: '✅ Graded',
+  // status labels now use SVG icons — see STATUS_COMP below
 }
 
 export default function StudentProjectsPage() {
@@ -138,7 +142,7 @@ export default function StudentProjectsPage() {
             const daysLeft = Math.ceil((new Date(p.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
             return (
               <div key={p._id} className="flex items-center gap-3 bg-[rgba(212,168,67,0.08)] border border-[rgba(212,168,67,0.4)] rounded-sm px-4 py-2.5">
-                <span>⚠️</span>
+                <span><IconWarning size={18} color="#d4a843" /></span>
                 <span className="text-sm text-[#8b5a2b]">
                   <strong>{p.title}</strong> — {daysLeft} day{daysLeft !== 1 ? 's' : ''} left!
                 </span>
@@ -160,14 +164,14 @@ export default function StudentProjectsPage() {
               <h2 className="text-[#63b3ed] font-bold" style={{ fontFamily: 'Georgia, serif' }}>
                 {activeProject.submission ? 'Update Submission' : 'Submit Project'}
               </h2>
-              <button onClick={() => setActiveProject(null)} className="text-[rgba(250,246,238,0.4)] hover:text-white text-xl">×</button>
+              <button onClick={() => setActiveProject(null)} className="text-[rgba(250,246,238,0.4)] hover:text-white text-xl"><IconClose size={20} color="currentColor" /></button>
             </div>
             <div className="p-6">
               {/* Project info */}
               <div className="mb-4 p-3 bg-[#faf6ee] border border-[#c8b89a] rounded-sm">
                 <div className="font-bold text-[#1a1209] text-sm" style={{ fontFamily: 'Georgia, serif' }}>{activeProject.title}</div>
                 <div className="text-xs text-[#7a6a52] mt-0.5">
-                  📅 Due {new Date(activeProject.deadline).toLocaleDateString()} · 🏆 {activeProject.maxScore}pts max
+                   <IconCalendar size={12} color="currentColor" /> Due {new Date(activeProject.deadline).toLocaleDateString()} · <IconTrophy size={12} color="currentColor" /> {activeProject.maxScore}pts max
                 </div>
                 {activeProject.description && (
                   <p className="text-xs text-[#7a6a52] mt-1">{activeProject.description}</p>
@@ -223,14 +227,14 @@ export default function StudentProjectsPage() {
                 {activeProject.submission && activeProject.submission.status !== 'graded' && (
                   <button onClick={() => handleDelete(activeProject.submission!._id)}
                     className="text-xs px-3 py-2 border border-[rgba(192,57,43,0.3)] text-[#c0392b] rounded-sm hover:bg-[rgba(192,57,43,0.08)] transition-colors">
-                    🗑 Remove
+                    <IconTrash size={16} color="currentColor" /> Remove
                   </button>
                 )}
                 <div className="flex gap-2 ml-auto">
                   {/* Save as draft */}
                   <button onClick={() => handleSubmit(true)} disabled={submitting}
                     className="text-xs px-4 py-2 border border-[#c8b89a] text-[#7a6a52] hover:bg-[#faf6ee] rounded-sm disabled:opacity-50 transition-colors">
-                    {submitting ? '...' : '✏️ Save Draft'}
+                    {submitting ? '...' : <><IconSave size={16} color="currentColor" /> Save Draft</>}
                   </button>
                   {/* Official submit */}
                   <button onClick={() => handleSubmit(false)} disabled={submitting || (!formFileUrl && !formText)}
@@ -302,9 +306,9 @@ export default function StudentProjectsPage() {
 
                         <div className="flex flex-wrap gap-3 mt-2 text-xs text-[#7a6a52] font-mono">
                           <span className={overdue && subStatus === 'none' ? 'text-[#c0392b] font-bold' : ''}>
-                            📅 {overdue ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`} · {new Date(project.deadline).toLocaleDateString()}
+                            <IconCalendar size={12} color="currentColor" /> {overdue ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`} · {new Date(project.deadline).toLocaleDateString()}
                           </span>
-                          <span>🏆 {project.maxScore}pts</span>
+                          <span><IconTrophy size={12} color="currentColor" /> {project.maxScore}pts</span>
                           {sub?.grade !== undefined && (
                             <span className="text-[#1a7a6e] font-bold">Grade: {sub.grade}pts</span>
                           )}
@@ -330,7 +334,10 @@ export default function StudentProjectsPage() {
                       {subStatus !== 'graded' && (
                         <button onClick={() => openSubmit(project)}
                           className="shrink-0 text-xs px-4 py-2 bg-[#1a2535] text-[#63b3ed] border border-[rgba(99,179,237,0.3)] rounded-sm hover:bg-[#243040] transition-colors font-semibold">
-                          {sub ? (sub.status === 'draft' ? '✏️ Edit Draft' : '↺ Update') : '📤 Submit'}
+                          {sub ? (sub.status === 'draft' ? <span className="flex items-center gap-1.5">
+                            <IconDraft size={13} color="currentColor" />Edit Draft</span> : <span className="flex items-center gap-1.5">
+                              <IconRefresh size={13} color="currentColor" />Update</span>) : <span className="flex items-center gap-1.5">
+                                <IconSubmitted size={13} color="currentColor" />Submit</span>}
                         </button>
                       )}
                     </div>

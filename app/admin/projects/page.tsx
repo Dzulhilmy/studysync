@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import RealTimeClock from "@/components/RealTimeClock";
+import {
+  IconClose, IconTeacher, IconSubjects, IconCalendar, IconTrophy,
+  IconComment, IconRejected, IconApproved, IconProjects, IconArrowRight,
+  IconPending, IconWarning,
+} from '@/components/NavIcons'
 
 interface Project {
   _id: string;
@@ -120,7 +125,7 @@ export default function ProjectsPage() {
                 onClick={() => setReviewProject(null)}
                 className="text-[rgba(250,246,238,0.4)] hover:text-white text-xl"
               >
-                ×
+                <IconClose size={16} color="currentColor" />
               </button>
             </div>
             <div className="p-6">
@@ -132,18 +137,22 @@ export default function ProjectsPage() {
                   {reviewProject.description}
                 </div>
                 <div className="flex gap-4 text-xs text-[#7a6a52] font-mono">
-                  <span>
-                    📚 {reviewProject.subject?.name} (
+                  <span className="flex items-center gap-1">
+                    <IconSubjects size={12} color="#7a6a52" /> {reviewProject.subject?.name} (
                     {reviewProject.subject?.code})
                   </span>
-                  <span>👩‍🏫 {reviewProject.createdBy?.name}</span>
+                  <span className="flex items-center gap-1">
+                    <IconTeacher size={14} color="#8b5a2b" /> {reviewProject.createdBy?.name}
+                  </span>
                 </div>
                 <div className="flex gap-4 text-xs text-[#7a6a52] font-mono mt-1">
-                  <span>
-                    📅 Due:{" "}
+                  <span className="flex items-center gap-1">
+                    <IconCalendar size={12} color="#7a6a52" /> Due:{" "}
                     {new Date(reviewProject.deadline).toLocaleDateString()}
                   </span>
-                  <span>🏆 Max score: {reviewProject.maxScore}</span>
+                  <span className="flex items-center gap-1">
+                    <IconTrophy size={12} color="#7a6a52" /> Max score: {reviewProject.maxScore}
+                  </span>
                 </div>
               </div>
               <div className="mb-5">
@@ -164,14 +173,14 @@ export default function ProjectsPage() {
                   disabled={saving}
                   className="flex-1 py-2.5 border border-[rgba(192,57,43,0.4)] text-[#c0392b] text-sm font-semibold hover:bg-[rgba(192,57,43,0.08)] rounded-sm disabled:opacity-50 transition-colors"
                 >
-                  ✕ Reject
+                  <IconRejected size={16} color="#c0392b" /> Reject
                 </button>
                 <button
                   onClick={() => handleDecision("approved")}
                   disabled={saving}
                   className="flex-1 py-2.5 bg-[#1a7a6e] text-white text-sm font-semibold hover:bg-[#155f56] rounded-sm disabled:opacity-50 transition-colors"
                 >
-                  ✓ Approve
+                  <IconApproved size={16} color="white" /> Approve
                 </button>
               </div>
             </div>
@@ -186,7 +195,7 @@ export default function ProjectsPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="bg-white border border-[#c8b89a] rounded-sm p-12 text-center shadow-[3px_3px_0_#c8b89a]">
-          <div className="text-4xl mb-3">🗂</div>
+          <div className="text-4xl mb-3"><IconProjects size={40} color="#c8b89a" /></div>
           <p className="text-[#7a6a52] text-sm">
             No {filter !== "all" ? filter : ""} projects found.
           </p>
@@ -217,13 +226,19 @@ export default function ProjectsPage() {
                     {p.description}
                   </p>
                   <div className="flex gap-3 mt-2 text-xs text-[#7a6a52] font-mono flex-wrap">
-                    <span>👩‍🏫 {p.createdBy?.name}</span>
-                    <span>📚 {p.subject?.name}</span>
-                    <span>📅 {new Date(p.deadline).toLocaleDateString()}</span>
+                    <span className="flex items-center gap-1">
+                      <IconTeacher size={12} color="#7a6a52" /> {p.createdBy?.name}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <IconSubjects size={12} color="#7a6a52" /> {p.subject?.name}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <IconCalendar size={12} color="#7a6a52" /> {new Date(p.deadline).toLocaleDateString()}
+                    </span>
                   </div>
                   {p.adminNote && (
                     <div className="mt-2 text-xs text-[#8b5a2b] bg-[rgba(212,168,67,0.08)] border border-[rgba(212,168,67,0.2)] px-2 py-1 rounded-sm">
-                      💬 {p.adminNote}
+                      <IconComment size={12} color="#8b5a2b" /> {p.adminNote}
                     </div>
                   )}
                 </div>
@@ -235,7 +250,7 @@ export default function ProjectsPage() {
                     }}
                     className="shrink-0 text-xs px-4 py-2 bg-[#2c1810] text-[#d4a843] border border-[rgba(212,168,67,0.3)] rounded-sm hover:bg-[#3d2415] transition-colors font-semibold"
                   >
-                    Review →
+                    Review <IconArrowRight size={12} color="#d4a843" />
                   </button>
                 )}
               </div>

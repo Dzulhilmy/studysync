@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import RealTimeClock from '@/components/RealTimeClock'
 import Link from 'next/link'
+import {
+  IconApproved, IconEye, IconSubmitted, IconPending, IconLock, IconArrowLeft,
+} from '@/components/NavIcons'
 
 const MONTHS = ['January','February','March','April','May','June',
                 'July','August','September','October','November','December']
@@ -140,7 +143,7 @@ export default function TeacherReportsPage() {
         href="/teacher"
         className="inline-flex items-center gap-2 text-xs font-mono text-[#7a6a52] hover:text-[#88d4ab] mb-6 group transition-colors"
       >
-        <span className="text-base leading-none group-hover:-translate-x-1 transition-transform">←</span>
+        <span className="text-base leading-none group-hover:-translate-x-1 transition-transform"><IconArrowLeft size={14} color="currentColor" /></span>
         Back to Dashboard
       </Link>
 
@@ -218,7 +221,7 @@ export default function TeacherReportsPage() {
                           )}
                         </div>
                         <div className="text-[10px] font-mono text-[#7a6a52] mt-0.5">
-                          ✅ {new Date(r.submittedAt).toLocaleDateString('en-MY', {
+                          <IconApproved size={12} color="currentColor" /> {new Date(r.submittedAt).toLocaleDateString('en-MY', {
                             day: 'numeric', month: 'short', year: 'numeric'
                           })}
                         </div>
@@ -230,7 +233,7 @@ export default function TeacherReportsPage() {
                         <button
                           onClick={() => loadFromHistory(r.month, r.year)}
                           className="flex-1 flex items-center justify-center gap-1 py-2 text-[10px] font-mono text-[#7a6a52] hover:text-[#1a7a6e] hover:bg-[#f0faf8] transition-all border-r border-[#f0e9d6]">
-                          👁️ View
+                          <IconEye size={12} color="currentColor" /> View
                         </button>
                         <button
                           onClick={() => printFromHistory(r._id, r.month, r.year)}
@@ -279,7 +282,7 @@ export default function TeacherReportsPage() {
               {submitted && (
                 <div className="px-4 py-3 bg-[rgba(26,122,110,0.08)] border border-[rgba(26,122,110,0.3)] rounded-sm flex items-center justify-between gap-3 flex-wrap">
                   <span className="text-[#1a7a6e] text-sm font-semibold">
-                    ✅ This report has been submitted to admin.
+                    <IconApproved size={12} color="currentColor" /> This report has been submitted to admin.
                   </span>
                   <button onClick={handlePrint}
                     className="flex items-center gap-2 px-3 py-1.5 bg-white border border-[rgba(26,122,110,0.3)] text-[#1a7a6e] text-xs font-semibold rounded-sm hover:bg-[#f0faf8] shadow-[1px_1px_0_#c8b89a] transition-all">
@@ -303,7 +306,7 @@ export default function TeacherReportsPage() {
                 {!submitted && (
                   <button onClick={handleSubmit} disabled={submitting}
                     className="flex items-center gap-2 px-4 py-2 bg-[#1a3a2a] text-[#d4a843] text-xs font-semibold rounded-sm border border-[rgba(212,168,67,0.3)] hover:bg-[#224d38] disabled:opacity-50 transition-colors shadow-[2px_2px_0_rgba(26,18,9,0.3)]">
-                    {submitting ? '⏳ Submitting...' : '📤 Submit to Admin'}
+                    {submitting ? <IconPending size={12} color="currentColor" /> : <IconSubmitted size={12} color="currentColor" />} {submitting ? ' Submitting...' : '📤 Submit to Admin'}
                   </button>
                 )}
               </div>
@@ -387,7 +390,8 @@ export default function TeacherReportsPage() {
               <div className="flex items-center justify-between pt-2 border-t border-[#e8dfc8]">
                 <p className="text-[11px] font-mono text-[#7a6a52]">
                   {submitted
-                    ? '🔒 Submitted · read-only'
+                    ? <span className="flex items-center gap-1.5">
+                      <IconLock size={14} color="currentColor" />Submitted · read-only</span>
                     : '📝 Draft · not yet submitted to admin'}
                 </p>
                 <button onClick={handlePrint}

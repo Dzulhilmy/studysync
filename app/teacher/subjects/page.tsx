@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import FileUpload from '@/components/FileUpload'
 import RealTimeClock from '@/components/RealTimeClock'
 import  Link  from 'next/link'
+import { IconAdd } from '@/components/NavIcons'
 
 interface Material { _id: string; title: string; type: string; url: string; topic: string; createdAt: string; linkUrl?: string; fileUrl?: string }
 interface Subject { _id: string; name: string; code: string; description: string; students: any[]; materialCount: number }
@@ -175,7 +176,7 @@ export default function TeacherSubjectsPage() {
             {selected && (
               <button onClick={() => { setShowForm(true); setError('') }}
                 className="text-xs px-3 py-1.5 bg-[#1a3a2a] text-[#d4a843] border border-[rgba(212,168,67,0.3)] rounded-sm hover:bg-[#224d38] transition-colors font-semibold">
-                ＋ Add Material
+                <IconAdd size={13} color="currentColor" /> Add Material
               </button>
             )}
           </div>

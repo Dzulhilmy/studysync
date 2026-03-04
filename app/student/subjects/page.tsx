@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import RealTimeClock from '@/components/RealTimeClock';
+import { IconDraft, IconSubmitted, IconApproved, IconTeacher } from '@/components/NavIcons'
 
 interface Material {
   _id: string; title: string; type: string; url: string; topic: string
@@ -31,10 +32,10 @@ function getFileUrl(url: string, type: string): string {
   return url
 }
 
-const SUBMIT_STATUS: Record<string, { label: string; color: string }> = {
-  draft:     { label: '✏️ Draft',     color: 'text-[#8b5a2b] bg-[rgba(139,90,43,0.08)] border-[rgba(139,90,43,0.25)]' },
-  submitted: { label: '📤 Submitted', color: 'text-[#1a7a6e] bg-[rgba(26,122,110,0.08)] border-[rgba(26,122,110,0.25)]' },
-  graded:    { label: '✅ Graded',    color: 'text-[#d4a843] bg-[rgba(212,168,67,0.1)] border-[rgba(212,168,67,0.3)]' },
+const SUBMIT_STATUS: Record<string, { label: string; Icon?: React.ComponentType<any>; color: string }> = {
+  draft:     { label: 'Draft', Icon: IconDraft,     color: 'text-[#8b5a2b] bg-[rgba(139,90,43,0.08)] border-[rgba(139,90,43,0.25)]' },
+  submitted: { label: 'Submitted', Icon: IconSubmitted, color: 'text-[#1a7a6e] bg-[rgba(26,122,110,0.08)] border-[rgba(26,122,110,0.25)]' },
+  graded:    { label: 'Graded', Icon: IconApproved,    color: 'text-[#d4a843] bg-[rgba(212,168,67,0.1)] border-[rgba(212,168,67,0.3)]' },
   none:      { label: '⭕ Not submitted', color: 'text-[#c0392b] bg-[rgba(192,57,43,0.06)] border-[rgba(192,57,43,0.2)]' },
 }
 
@@ -121,7 +122,7 @@ export default function StudentSubjectsPage() {
                       {s.name}
                     </div>
                     <div className={`text-xs mt-0.5 ${selected?._id === s._id ? 'text-[rgba(250,246,238,0.4)]' : 'text-[#7a6a52]'}`}>
-                      👩‍🏫 {s.teacher?.name ?? 'No teacher'}
+                      <IconTeacher size={12} color="currentColor" /> {s.teacher?.name ?? 'No teacher'}
                     </div>
                   </div>
                   <div className="text-right shrink-0">

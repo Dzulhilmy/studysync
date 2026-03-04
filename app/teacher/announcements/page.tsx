@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { JSX, useEffect, useState } from 'react'
 import FileUpload from '@/components/FileUpload'
 import Link from 'next/link'
 import RealTimeClock from '@/components/RealTimeClock'
+import {
+  IconAdd, IconClose, IconBell, IconApproved, IconRejected,
+  IconClipboard, IconWarning, IconArrowRight, IconEye, IconCalendar
+} from '@/components/NavIcons'
 
 interface Subject { _id: string; name: string; code: string }
 interface Announcement {
@@ -17,10 +21,10 @@ interface Notification {
   _id: string; type: string; title: string; message: string
   link: string; isRead: boolean; createdAt: string
 }
-const TYPE_ICON: Record<string, string> = {
-  project_approved: '✅', project_rejected: '❌', project_published: '📋',
-  submission_received: '📥', submission_graded: '🏆',
-  deadline_warning: '⏰', announcement_posted: '📢',
+const TYPE_ICON: Record<string, (props:{size?:number,color?:string})=>JSX.Element> = {
+  project_approved: IconApproved, project_rejected: IconRejected, project_published: IconClipboard,
+  submission_received: () => <>📥</>, submission_graded: () => <>🏆</>,
+  deadline_warning: () => <>⏰</>, announcement_posted: () => <>📢</>,
 }
 function timeAgo(d: string) {
   const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000)
@@ -149,7 +153,7 @@ export default function AnnouncementsPage() {
         {tab === 'announcements' && (
           <button onClick={() => { setShowForm(true); setError('') }}
             className="flex items-center gap-2 bg-[#1a3a2a] text-[#d4a843] px-4 py-2 text-sm font-semibold border border-[rgba(212,168,67,0.3)] hover:bg-[#224d38] transition-colors rounded-sm shadow-[2px_2px_0_rgba(26,18,9,0.3)]">
-            ＋ New Announcement
+            <IconAdd size={14} color="#d4a843" /> New Announcement
           </button>
         )}
       </div>
@@ -158,7 +162,7 @@ export default function AnnouncementsPage() {
       <div className="flex gap-1 bg-[#f0e9d6] p-1 rounded-sm w-fit mb-6">
         {([
           { key: 'announcements', label: '📢 Announcements', badge: 0 },
-          { key: 'notifications', label: '🔔 Notifications',  badge: unreadNotifs },
+          { key: 'notifications', label: 'Notifications', Icon: IconBell, badge: unreadNotifs },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`relative px-4 py-2 text-xs font-mono uppercase tracking-wider rounded-sm transition-all flex items-center gap-2 ${
@@ -180,7 +184,7 @@ export default function AnnouncementsPage() {
           <div className="bg-white border border-[#c8b89a] rounded-sm shadow-[5px_5px_0_#c8b89a] w-full max-w-lg">
             <div className="bg-[#1a3a2a] px-6 py-4 flex items-center justify-between">
               <h2 className="text-[#d4a843] font-bold" style={{ fontFamily: 'Georgia, serif' }}>Post Announcement</h2>
-              <button onClick={() => setShowForm(false)} className="text-[rgba(250,246,238,0.4)] hover:text-white text-xl">×</button>
+              <button onClick={() => setShowForm(false)} className="text-[rgba(250,246,238,0.4)] hover:text-white text-xl"><IconClose size={16} color="currentColor" /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {error && <div className="text-[#c0392b] text-xs bg-[rgba(192,57,43,0.08)] border border-[rgba(192,57,43,0.2)] px-3 py-2 rounded-sm">{error}</div>}
@@ -246,7 +250,7 @@ export default function AnnouncementsPage() {
                 <div key={n._id} className={`bg-white border rounded-sm shadow-[2px_2px_0_#c8b89a] flex items-start gap-4 px-5 py-4 group transition-all ${
                   !n.isRead ? 'border-l-4 border-l-[#1a7a6e] border-[#c8b89a]' : 'border-[#c8b89a]'
                 }`}>
-                  <span className="text-xl shrink-0 mt-0.5">{TYPE_ICON[n.type] ?? '🔔'}</span>
+                  <span className="text-xl shrink-0 mt-0.5">{TYPE_ICON[n.type] ? TYPE_ICON[n.type]({ size: 24, color: "currentColor" }) : <IconBell size={24} color="currentColor" />}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className={`font-bold text-sm ${!n.isRead ? 'text-[#1a1209]' : 'text-[#7a6a52]'}`} style={{ fontFamily: 'Georgia, serif' }}>{n.title}</h3>
@@ -256,10 +260,10 @@ export default function AnnouncementsPage() {
                     <div className="flex items-center gap-3 mt-2">
                       <span className="text-xs font-mono text-[#a89880]">{timeAgo(n.createdAt)}</span>
                       {!n.isRead && <button onClick={() => markNotifRead(n._id)} className="text-xs font-mono text-[#1a7a6e] hover:underline underline-offset-2">Mark read</button>}
-                      <a href={n.link} className="text-xs font-mono text-[#1a7a6e] hover:underline underline-offset-2 ml-auto">Go to page →</a>
+                      <a href={n.link} className="text-xs font-mono text-[#1a7a6e] hover:underline underline-offset-2 ml-auto">Go to page <IconArrowRight size={10} color="currentColor" /></a>
                     </div>
                   </div>
-                  <button onClick={() => dismissNotif(n._id)} className="text-[#c8b89a] hover:text-[#c0392b] text-sm opacity-0 group-hover:opacity-100 transition-all shrink-0 px-1">✕</button>
+                  <button onClick={() => dismissNotif(n._id)} className="text-[#c8b89a] hover:text-[#c0392b] text-sm opacity-0 group-hover:opacity-100 transition-all shrink-0 px-1"><IconClose size={12} color="currentColor" /></button>
                 </div>
               ))}
             </div>
@@ -293,8 +297,8 @@ export default function AnnouncementsPage() {
                   <h3 className="font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>{a.title}</h3>
                   <p className="text-sm text-[#7a6a52] mt-1 leading-relaxed">{a.content}</p>
                   <div className="flex gap-3 mt-2 text-xs text-[#7a6a52] font-mono flex-wrap">
-                    <span>📅 {new Date(a.createdAt).toLocaleDateString()}</span>
-                    <span>👁 {a.readBy?.length ?? 0} read</span>
+                    <span><IconCalendar size={12} color="currentColor" /> {new Date(a.createdAt).toLocaleDateString()}</span>
+                    <span><IconEye size={12} color="currentColor" /> {a.readBy?.length ?? 0} read</span>
                     {a.fileUrl && (
                       <a href={a.fileUrl} target="_blank" rel="noreferrer"
                         className="text-[#1a7a6e] hover:underline underline-offset-2">

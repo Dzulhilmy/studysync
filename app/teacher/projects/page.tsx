@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { JSX, useEffect, useRef, useState } from 'react'
 import FileUpload from '@/components/FileUpload'
 import RealTimeClock from '@/components/RealTimeClock';
 import  Link  from 'next/link';
+import {
+  IconAdd, IconClose, IconWarning, IconPending, IconApproved, IconRejected,
+  IconCalendar, IconTrophy, IconSubmitted, IconRefresh, IconTrash, IconProjects,
+} from '@/components/NavIcons'
 
 interface Subject { _id: string; name: string; code: string }
 interface Project {
@@ -21,7 +25,9 @@ const STATUS_STYLE: Record<string, string> = {
   approved: 'text-[#1a7a6e] bg-[rgba(26,122,110,0.08)] border-[rgba(26,122,110,0.25)]',
   rejected: 'text-[#c0392b] bg-[rgba(192,57,43,0.08)] border-[rgba(192,57,43,0.25)]',
 }
-const STATUS_ICON: Record<string, string> = { pending: '⏳', approved: '✅', rejected: '✕' }
+const STATUS_ICON_COMP: Record<string, (props: { size?: number; color?: string }) => JSX.Element> = {
+  pending: IconPending, approved: IconApproved, rejected: IconRejected,
+}
 const EMPTY = { title: '', description: '', subject: '', deadline: '', maxScore: 100, fileUrl: '', fileName: '' }
 
 export default function TeacherProjectsPage() {
@@ -143,7 +149,7 @@ export default function TeacherProjectsPage() {
         <RealTimeClock accentColor="#1a7a6e" />
         <button onClick={openNew}
           className="flex items-center gap-2 bg-[#1a3a2a] text-[#d4a843] px-4 py-2 text-sm font-semibold border border-[rgba(212,168,67,0.3)] hover:bg-[#224d38] transition-colors rounded-sm shadow-[2px_2px_0_rgba(26,18,9,0.3)]">
-          ＋ New Project
+          <IconAdd size={14} color="#d4a843" /> New Project
         </button>
       </div>
 
@@ -154,7 +160,7 @@ export default function TeacherProjectsPage() {
             className={`px-4 py-1.5 text-xs font-mono uppercase tracking-wider rounded-sm border transition-all ${
               filter === f ? 'bg-[#1a3a2a] text-[#d4a843] border-[rgba(212,168,67,0.4)]'
                           : 'bg-white text-[#7a6a52] border-[#c8b89a] hover:border-[#1a7a6e]'}`}>
-            {STATUS_ICON[f] ?? '📋'} {f} ({counts[f] ?? projects.length})
+            {STATUS_ICON_COMP[f] ? (() => { const IC = STATUS_ICON_COMP[f]; return <IC size={12} color="currentColor" /> })() : '📋'} {f} ({counts[f] ?? projects.length})
           </button>
         ))}
       </div>
@@ -167,7 +173,7 @@ export default function TeacherProjectsPage() {
               <h2 className="text-[#d4a843] font-bold" style={{ fontFamily: 'Georgia, serif' }}>
                 {editProject ? (editProject.status === 'rejected' ? '↺ Resubmit Project' : 'Edit Project') : 'Create Project'}
               </h2>
-              <button onClick={() => setShowForm(false)} className="text-[rgba(250,246,238,0.4)] hover:text-white text-xl">×</button>
+              <button onClick={() => setShowForm(false)} className="text-[rgba(250,246,238,0.4)] hover:text-white text-xl"><IconClose size={16} color="currentColor" /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {error && <div className="text-[#c0392b] text-xs bg-[rgba(192,57,43,0.08)] border border-[rgba(192,57,43,0.2)] px-3 py-2 rounded-sm">{error}</div>}
@@ -236,7 +242,7 @@ export default function TeacherProjectsPage() {
         <div className="text-[#7a6a52] text-sm font-mono animate-pulse">Loading projects...</div>
       ) : filtered.length === 0 ? (
         <div className="bg-white border border-[#c8b89a] rounded-sm p-12 text-center shadow-[3px_3px_0_#c8b89a]">
-          <div className="text-4xl mb-3">🗂</div>
+          <div className="text-4xl mb-3"><IconProjects size={40} color="#c8b89a" /></div>
           <p className="text-[#7a6a52] text-sm">No {filter !== 'all' ? filter : ''} projects yet.</p>
         </div>
       ) : (
@@ -248,14 +254,14 @@ export default function TeacherProjectsPage() {
               {/* Warning banner */}
               {p.warnUnsubmitted && (
                 <div className="flex items-center gap-2 mb-3 text-xs text-[#8b5a2b] bg-[rgba(212,168,67,0.08)] border border-[rgba(212,168,67,0.25)] px-3 py-1.5 rounded-sm">
-                  ⚠️ <strong>{p.unsubmitted} student{p.unsubmitted !== 1 ? 's' : ''}</strong> haven't submitted — only <strong>{p.daysLeft} day{p.daysLeft !== 1 ? 's' : ''}</strong> left!
+                  <IconWarning size={14} color="#8b5a2b" /> <strong>{p.unsubmitted} student{p.unsubmitted !== 1 ? 's' : ''}</strong> haven't submitted — only <strong>{p.daysLeft} day{p.daysLeft !== 1 ? 's' : ''}</strong> left!
                 </div>
               )}
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1.5">
                     <span className={`text-xs font-mono px-2 py-0.5 border rounded-sm capitalize ${STATUS_STYLE[p.status]}`}>
-                      {STATUS_ICON[p.status]} {p.status}
+                      {STATUS_ICON_COMP[p.status] && (() => { const IC = STATUS_ICON_COMP[p.status]; return <IC size={12} color="currentColor" /> })()} {p.status}
                     </span>
                     <span className="text-xs font-mono text-[#c0392b] bg-[rgba(192,57,43,0.06)] border border-[rgba(192,57,43,0.2)] px-2 py-0.5 rounded-sm">
                       {p.subject?.code}
@@ -269,10 +275,10 @@ export default function TeacherProjectsPage() {
                     </p>
                   )}
                   <div className="flex flex-wrap gap-3 mt-2 text-xs text-[#7a6a52] font-mono">
-                    <span>📅 {new Date(p.deadline).toLocaleDateString()}</span>
-                    <span>🏆 Max {p.maxScore}pts</span>
-                    <span>📤 {p.submitted}/{p.totalStudents} submitted</span>
-                    <span>✅ {p.graded} graded</span>
+                    <span><IconCalendar size={12} color='#7a6a52' /> {new Date(p.deadline).toLocaleDateString()}</span>
+                    <span><IconTrophy size={12} color='#7a6a52' /> Max {p.maxScore}pts</span>
+                    <span><IconSubmitted size={12} color='#7a6a52' /> {p.submitted}/{p.totalStudents} submitted</span>
+                    <span><IconRefresh size={12} color='#7a6a52' /> {p.graded} graded</span>
                   </div>
                   {/* Submission progress bar */}
                   {p.totalStudents > 0 && (
@@ -291,7 +297,7 @@ export default function TeacherProjectsPage() {
                   {(p.status === 'rejected' || p.status === 'pending') && (
                     <button onClick={() => openEdit(p)}
                       className="text-xs px-3 py-1.5 border border-[#c8b89a] hover:bg-[#f0e9d6] rounded-sm text-[#7a6a52] transition-colors">
-                      {p.status === 'rejected' ? '↺ Resubmit' : 'Edit'}
+                      {p.status === 'rejected' ? <IconRefresh size={12} color="currentColor" /> : <IconRefresh size={12} color="currentColor" />} {p.status === 'rejected' ? ' Resubmit' : 'Edit'}
                     </button>
                   )}
                   <button

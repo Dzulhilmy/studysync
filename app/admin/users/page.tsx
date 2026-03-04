@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import RealTimeClock from "@/components/RealTimeClock";
+import { IconAdd, IconClose } from '@/components/NavIcons'
 
 interface User {
   _id: string;
@@ -133,7 +134,7 @@ export default function UsersPage() {
           }}
           className="flex items-center gap-2 bg-[#2c1810] text-[#d4a843] px-4 py-2 text-sm font-semibold border border-[rgba(212,168,67,0.3)] hover:bg-[#3d2415] transition-colors rounded-sm shadow-[2px_2px_0_rgba(26,18,9,0.3)]"
         >
-          ＋ Register User
+          <IconAdd size={14} color="#d4a843" /> Register User
         </button>
       </div>
       {/* Filters */}
@@ -167,7 +168,7 @@ export default function UsersPage() {
                 onClick={() => setShowForm(false)}
                 className="text-[rgba(250,246,238,0.4)] hover:text-white text-xl"
               >
-                ×
+                <IconClose size={16} color="currentColor" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">

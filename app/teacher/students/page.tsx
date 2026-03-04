@@ -3,6 +3,11 @@
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import RealTimeClock from '@/components/RealTimeClock'
+import {
+  IconClose, IconWarning, IconApproved, IconSubmitted,
+  IconSave, IconPending, IconGrade, IconArrowLeft, IconInbox,
+  IconTrophy, IconCalendar, IconEmpty, IconStudents,
+} from '@/components/NavIcons'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -195,7 +200,7 @@ function GradingPanel({
               style={{ color: 'rgba(250,246,238,0.35)' }}
               onMouseEnter={e => (e.currentTarget.style.color = '#d4a843')}
               onMouseLeave={e => (e.currentTarget.style.color = 'rgba(250,246,238,0.35)')}>
-              ✕
+              <IconClose size={14} color="currentColor" />
             </button>
           </div>
 
@@ -218,7 +223,7 @@ function GradingPanel({
               <div className="ml-auto self-end pb-0.5">
                 <span className="text-[11px] font-mono px-2 py-0.5 rounded-sm"
                   style={{ background: 'rgba(212,168,67,0.15)', color: '#d4a843', border: '1px solid rgba(212,168,67,0.3)' }}>
-                  ⚠️ {student.submitted - student.graded} awaiting grade
+                  <IconWarning size={14} color="#d4a843" /> {student.submitted - student.graded} awaiting grade
                 </span>
               </div>
             )}
@@ -233,7 +238,7 @@ function GradingPanel({
             </div>
           ) : rows.length === 0 ? (
             <div className="text-center py-14">
-              <div className="text-3xl mb-2">📭</div>
+              <div className="text-3xl mb-2"><IconEmpty size={36} color="#c8b89a" /></div>
               <p className="text-[#7a6a52] text-sm">No projects found for this subject.</p>
             </div>
           ) : (
@@ -280,15 +285,15 @@ function GradingPanel({
                                     color:       sub.status === 'graded' ? '#1a7a6e' : '#b8882a',
                                     background:  sub.status === 'graded' ? 'rgba(26,122,110,0.06)' : 'rgba(212,168,67,0.06)',
                                   }}>
-                                  {sub.status === 'graded' ? '✅ Graded' : '📥 Submitted'}
+                                  {sub.status === 'graded' ? <IconApproved size={12} color="currentColor" /> + ' Graded' : <IconInbox size={12} color="currentColor" /> + ' Submitted'}
                                 </span>
                               </div>
                             </div>
                             <div className="flex flex-wrap gap-3">
-                              <span className="text-[11px] font-mono text-[#7a6a52]">🏆 Max: {row.project.maxScore}pts</span>
-                              <span className="text-[11px] font-mono" style={{ color: dl.color }}>📅 {dl.label} · {fmt(row.project.deadline)}</span>
+                              <span className="text-[11px] font-mono text-[#7a6a52]"><IconTrophy size={11} color="#7a6a52" /> Max: {row.project.maxScore}pts</span>
+                              <span className="text-[11px] font-mono" style={{ color: dl.color }}><IconCalendar size={11} color={dl.color} /> {dl.label} · {fmt(row.project.deadline)}</span>
                               {sub.submittedAt && (
-                                <span className="text-[11px] font-mono text-[#7a6a52]">📤 {fmt(sub.submittedAt)}</span>
+                                <span className="text-[11px] font-mono text-[#7a6a52]"><IconSubmitted size={11} color="#7a6a52" /> {fmt(sub.submittedAt)}</span>
                               )}
                             </div>
                           </div>
@@ -366,7 +371,7 @@ function GradingPanel({
 
                             <div className="flex items-center justify-between pt-1">
                               {inp.saved && (
-                                <span className="text-[11px] font-mono text-[#1a7a6e]">✅ Saved successfully</span>
+                                <span className="text-[11px] font-mono text-[#1a7a6e]"><IconApproved size={11} color="#1a7a6e" /> Saved successfully</span>
                               )}
                               <button
                                 onClick={() => saveGrade(sub._id, row.project.maxScore)}
@@ -377,7 +382,7 @@ function GradingPanel({
                                   color:       inp.saved ? '#1a7a6e' : '#d4a843',
                                   borderColor: inp.saved ? 'rgba(26,122,110,0.3)' : 'rgba(212,168,67,0.3)',
                                 }}>
-                                {inp.saving ? '⏳ Saving…' : inp.saved ? '✅ Saved' : '💾 Save Grade'}
+                                {inp.saving ? <span className="flex items-center gap-1"><IconPending size={13} color="currentColor" />Saving…</span> : inp.saved ? <IconApproved size={11} color="#1a7a6e" /> + ' Saved' : <IconSave size={11} color="#d4a843" /> + ' Save Grade'}
                               </button>
                             </div>
                           </div>
@@ -405,7 +410,7 @@ function GradingPanel({
                               {row.project.title}
                             </div>
                             <div className="text-[11px] font-mono mt-0.5" style={{ color: dl.color }}>
-                              📅 {dl.label} · {fmt(row.project.deadline)}
+                              <span className="flex items-center gap-1"><IconCalendar size={11} color={dl.color} />{dl.label} · {fmt(row.project.deadline)}</span>
                             </div>
                           </div>
                           <span className="text-[10px] font-mono px-2 py-0.5 rounded-sm border border-[#c8b89a] text-[#7a6a52]">
@@ -474,7 +479,7 @@ export default function TeacherStudentsPage() {
       {/* Back */}
       <Link href="/teacher" suppressHydrationWarning
         className="inline-flex items-center gap-2 text-xs font-mono text-[#4a3828] hover:text-[#1a7a6e] mb-6 group transition-colors">
-        <span suppressHydrationWarning className="text-base leading-none group-hover:-translate-x-1 transition-transform">←</span>
+        <span suppressHydrationWarning className="text-base leading-none group-hover:-translate-x-1 transition-transform"><IconArrowLeft size={14} color="currentColor" /></span>
         Back to Dashboard
       </Link>
 
@@ -600,7 +605,7 @@ export default function TeacherStudentsPage() {
                             )}
                           </div>
                           <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono rounded-sm border border-[rgba(26,122,110,0.3)] text-[#1a7a6e] bg-[rgba(26,122,110,0.05)] group-hover:bg-[rgba(26,122,110,0.12)] transition-colors shrink-0">
-                            ✏️ Grade
+                            <IconGrade size={13} color="currentColor" /> Grade
                           </div>
                         </div>
                       </div>
@@ -608,8 +613,8 @@ export default function TeacherStudentsPage() {
                       {/* Ungraded warning */}
                       {s.submitted > s.graded && (
                         <div className="mt-3 pt-3 border-t border-[#f0e9d6]">
-                          <span className="text-[11px] font-mono text-[#d4a843]">
-                            ⚠️ {s.submitted - s.graded} submission{s.submitted - s.graded > 1 ? 's' : ''} awaiting grade
+                          <span className="text-[11px] font-mono text-[#d4a843] flex items-center gap-1.5">
+                            <IconWarning size={12} color="#d4a843" /> {s.submitted - s.graded} submission{s.submitted - s.graded > 1 ? 's' : ''} awaiting grade
                           </span>
                         </div>
                       )}

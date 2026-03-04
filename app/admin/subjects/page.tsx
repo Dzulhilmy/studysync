@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import RealTimeClock from "@/components/RealTimeClock";
+import { IconAdd, IconClose, IconTeacher, IconSubjects, IconTrash } from '@/components/NavIcons'
 
 interface Teacher {
   _id: string;
@@ -119,7 +120,7 @@ export default function SubjectsPage() {
           onClick={openNew}
           className="flex items-center gap-2 bg-[#2c1810] text-[#d4a843] px-4 py-2 text-sm font-semibold border border-[rgba(212,168,67,0.3)] hover:bg-[#3d2415] transition-colors rounded-sm shadow-[2px_2px_0_rgba(26,18,9,0.3)]"
         >
-          ＋ New Subject
+          <IconAdd size={14} color="#d4a843" /> New Subject
         </button>
       </div>
       {/* Modal */}
@@ -134,7 +135,7 @@ export default function SubjectsPage() {
                 onClick={() => setShowForm(false)}
                 className="text-[rgba(250,246,238,0.4)] hover:text-white text-xl"
               >
-                ×
+                <IconClose size={16} color="currentColor" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -266,7 +267,7 @@ export default function SubjectsPage() {
                 {s.description || "No description."}
               </p>
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-xs">👩‍🏫</span>
+                <IconTeacher size={14} color="#8b5a2b" />
                 <span className="text-xs text-[#8b5a2b] font-semibold">
                   {s.teacher?.name ?? (
                     <span className="text-[#c8b89a] italic">Unassigned</span>
