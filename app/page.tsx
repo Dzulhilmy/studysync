@@ -868,7 +868,7 @@ const STACK = [
   { Icon: IconTailwind, n: "Tailwind CSS", d: "Utility-first" },
   { Icon: IconNextAuth, n: "NextAuth.js", d: "JWT · Role sessions" },
   { Icon: IconVercel, n: "Vercel", d: "Global edge deploy" },
-  { Icon: IconCloudinary, n: "Cloudinary", d: "Media & files" },
+  { Icon: IconCloudinary, n: "Uploadthing", d: "Media & files" },
 ];
 
 /* ═══════════════════════════════════════════
