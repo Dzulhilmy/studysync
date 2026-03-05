@@ -55,15 +55,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Logo */}
         <div className="px-6 pt-7 pb-5 border-b border-[rgba(212,168,67,0.12)]">
-          <div className="text-[rgba(212,168,67,0.4)] text-[10px] font-mono tracking-[0.3em] uppercase mb-2">管理者パネル</div>
           <div className="flex flex-col items-start gap-2">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
               <div className="w-12 h-12 flex-shrink-0">
                 <Image src="/Image_Logo.png" alt="StudySync Crest" width={40} height={40} style={{ objectFit: "contain" }} />
               </div>
-              <div className="flex-shrink-0">
-                <Image src="/Text_Logo.png" alt="StudySync" width={80} height={40} style={{ objectFit: "contain" }} />
-              </div>
+              <span
+                style={{
+                  fontFamily: "Noto Serif JP,serif",
+                  fontWeight: 900,
+                  fontSize: "1.18rem",
+                  color: "#faf6ee",
+                  letterSpacing: "-.01em",
+                }}
+              >
+                Study
+              </span>
+              <span
+                style={{
+                  fontFamily: "Noto Serif JP,serif",
+                  fontWeight: 900,                  
+                  fontSize: "1.18rem",
+                  color: "transparent",
+                  WebkitTextStroke: "2px #d4a843",
+                  textShadow: "0 0 100px rgba(212,168,67,.12)",
+                }}
+              >
+                Sync
+              </span>
             </div>
             <div className="text-[rgba(212,168,67,0.35)] text-[10px] font-mono tracking-widest mt-0.5">Administrator Portal</div>
           </div>

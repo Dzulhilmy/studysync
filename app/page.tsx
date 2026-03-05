@@ -1117,13 +1117,30 @@ export default function Home() {
               gap: 6,
             }}
           >
-            <Image
-              src="/Text_Logo.png"
-              alt="StudySync Text"
-              width={120}
-              height={30}
-              style={{ objectFit: "cover" }}
-            />
+            <div style={{ display: "flex", alignItems: "baseline", gap: 0 }}>
+              <span
+                style={{
+                  fontFamily: "Noto Serif JP,serif",
+                  fontWeight: 900,
+                  fontSize: "1.18rem",
+                  color: "#faf6ee",
+                  letterSpacing: "-.01em",
+                }}
+              >
+                Study
+              </span>
+              <span
+                style={{
+                  fontFamily: "Noto Serif JP,serif",
+                  display: "block",
+                color: "transparent",
+                WebkitTextStroke: "2px #d4a843",
+                textShadow: "0 0 100px rgba(212,168,67,.12)",
+                }}
+              >
+                Sync
+              </span>
+            </div>
             <span
               style={{
                 fontFamily: "Share Tech Mono",
@@ -1465,7 +1482,7 @@ export default function Home() {
             pointerEvents: "none",
           }}
         >
-          <span style={{ fontSize: "1.4rem", lineHeight: 1 }}>承認</span>
+          <span style={{ fontSize: "1.4rem", lineHeight: 1 }}>APPROVED</span>
           <span
             style={{
               fontSize: ".46rem",
@@ -1473,7 +1490,7 @@ export default function Home() {
               fontFamily: "Share Tech Mono",
             }}
           >
-            APPROVED 2026
+           2026
           </span>
         </div>
 
@@ -1497,7 +1514,7 @@ export default function Home() {
               marginBottom: "1.9rem",
             }}
           >
-            スタディシンク · Secondary School Learning Platform
+            Secondary School Learning Platform
           </p>
 
           {/* Giant logotype */}
@@ -1512,6 +1529,18 @@ export default function Home() {
               marginBottom: "1.6rem",
             }}
           >
+            <Image
+              src="/Image_Logo.png"
+              alt="StudySync Crest"
+              width={110}
+              height={110}
+              style={{
+                objectFit:'contain', flexShrink:0,
+                filter:'drop-shadow(0 0 32px rgba(212,168,67,.35))',
+                width:'clamp(56px,10vw,110px)', height:'auto', marginRight:'0.12em',
+                alignItems:'center', justifyContent:'center', display:'inline-flex',
+              }}
+            />
             <span
               className="bounce-study"
               style={{ color: "#faf6ee", display: "block" }}
@@ -1807,7 +1836,7 @@ export default function Home() {
             {
               v: "3",
               l: "User Roles",
-              jp: "役割",
+              
               icon: (
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <circle cx="8" cy="9" r="3.5" fill="#1a1209" opacity="0.35" />
@@ -1832,7 +1861,7 @@ export default function Home() {
             {
               v: "6",
               l: "Core Modules",
-              jp: "モジュール",
+              
               icon: (
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <rect
@@ -1877,7 +1906,7 @@ export default function Home() {
             {
               v: "∞",
               l: "Subjects",
-              jp: "科目",
+              
               icon: (
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <path
@@ -1894,7 +1923,7 @@ export default function Home() {
             {
               v: "100%",
               l: "Web-Based",
-              jp: "ウェブ",
+              
               icon: (
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <circle
@@ -1959,9 +1988,13 @@ export default function Home() {
                     fontSize: ".55rem",
                     color: "rgba(26,18,9,.36)",
                     letterSpacing: ".22em",
+                    marginTop: 6,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    display: "flex",
                   }}
                 >
-                  {s.jp}
+                  {s.icon}
                 </div>
               </div>
             </Rise>
@@ -1993,17 +2026,7 @@ export default function Home() {
           }}
         >
           <Rise style={{ textAlign: "center", marginBottom: "5rem" }}>
-            <span
-              style={{
-                fontFamily: "Share Tech Mono",
-                fontSize: ".58rem",
-                letterSpacing: ".42em",
-                color: "#c0392b",
-                textTransform: "uppercase",
-              }}
-            >
-              機能一覧
-            </span>
+           
             <h2
               style={{
                 fontFamily: "Noto Serif JP,serif",
@@ -2118,17 +2141,7 @@ export default function Home() {
           }}
         >
           <Rise style={{ textAlign: "center", marginBottom: "5rem" }}>
-            <span
-              style={{
-                fontFamily: "Share Tech Mono",
-                fontSize: ".58rem",
-                letterSpacing: ".42em",
-                color: "rgba(212,168,67,.5)",
-                textTransform: "uppercase",
-              }}
-            >
-              ユーザーロール
-            </span>
+            
             <h2
               style={{
                 fontFamily: "Noto Serif JP,serif",
@@ -2237,7 +2250,7 @@ export default function Home() {
                           marginTop: 2,
                         }}
                       >
-                        {r.jp}
+                        
                       </div>
                     </div>
                   </div>
@@ -2355,17 +2368,7 @@ export default function Home() {
             }}
           >
             <Rise>
-              <span
-                style={{
-                  fontFamily: "Share Tech Mono",
-                  fontSize: ".58rem",
-                  letterSpacing: ".42em",
-                  color: "#c0392b",
-                  textTransform: "uppercase",
-                }}
-              >
-                技術スタック
-              </span>
+              
               <h2
                 style={{
                   fontFamily: "Noto Serif JP,serif",
@@ -2628,7 +2631,12 @@ export default function Home() {
             color: "#faf6ee",
           }}
         >
-          Study<span style={{ color: "#d4a843" }}>Sync</span>
+          Study<span style={{
+                  fontFamily: "Noto Serif JP,serif",
+                  color: "transparent",
+                  WebkitTextStroke: "2px #d4a843",
+                  textShadow: "0 0 100px rgba(212,168,67,.12)",
+                  }}>Sync</span>
         </div>
         <div
           style={{

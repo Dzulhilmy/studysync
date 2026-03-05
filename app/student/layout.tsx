@@ -91,16 +91,14 @@ export default function StudentLayout({
           bg-[#1a2535] border-r border-[rgba(212,168,67,0.12)]
           transition-transform duration-300
           ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:translate-x-0 lg:static lg:z-auto lg:self-stretch
+          lg:translate-x-0 lg:sticky lg:z-auto lg:self-stretch
         `}
       >
         {/* Logo */}
         <div className="px-6 pt-7 pb-5 border-b border-[rgba(212,168,67,0.1)]">
-          <div className="text-[rgba(212,168,67,0.4)] text-[10px] font-mono tracking-[0.3em] uppercase mb-2">
-            学生パネル
-          </div>
+          
           <div className="flex flex-col items-start gap-2">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
               <div className="w-12 h-12 flex-shrink-0">
                 <Image
                   src="/Image_Logo.png"
@@ -110,15 +108,29 @@ export default function StudentLayout({
                   style={{ objectFit: "contain" }}
                 />
               </div>
-              <div className="flex-shrink-0">
-                <Image
-                  src="/Text_Logo.png"
-                  alt="StudySync"
-                  width={80}
-                  height={40}
-                  style={{ objectFit: "contain" }}
-                />
-              </div>
+              <span
+                style={{
+                  fontFamily: "Noto Serif JP,serif",
+                  fontWeight: 900,
+                  fontSize: "1.18rem",
+                  color: "#faf6ee",
+                  letterSpacing: "-.01em",
+                }}
+              >
+                Study
+              </span>
+              <span
+                style={{
+                  fontFamily: "Noto Serif JP,serif",
+                  fontWeight: 900,
+                  fontSize: "1.18rem",
+                  color: "transparent",
+                  WebkitTextStroke: "2px #d4a843",
+                  textShadow: "0 0 100px rgba(212,168,67,.12)",
+                }}
+              >
+                Sync
+              </span>
             </div>
           </div>
           <div className="text-[rgba(99,179,237,0.4)] text-[10px] font-mono tracking-widest mt-0.5">
