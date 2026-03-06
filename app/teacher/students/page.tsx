@@ -476,7 +476,7 @@ export default function TeacherStudentsPage() {
 
       <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <p className="text-[#1a7a6e] text-xs font-mono tracking-[0.2em] uppercase mb-1">学生管理</p>
+          
           <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
             Student Progress & Grading
           </h1>

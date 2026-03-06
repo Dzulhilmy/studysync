@@ -119,9 +119,7 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <p className="text-[#c0392b] text-xs font-mono tracking-[0.2em] uppercase mb-1">
-            ユーザー管理
-          </p>
+          
           <h1 className="text-2xl font-bold text-[#1a1209] font-serif">
             User Management
           </h1>

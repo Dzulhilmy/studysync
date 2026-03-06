@@ -121,7 +121,7 @@ export default function TeacherSubjectsPage() {
       {/* ── Header ── */}
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <p className="text-[#1a7a6e] text-xs font-mono tracking-[0.2em] uppercase mb-1">科目管理</p>
+          
           <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>Subject Management</h1>
           <p className="text-[#7a6a52] text-sm mt-1">Select a subject to manage its learning materials.</p>
         </div>

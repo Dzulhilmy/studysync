@@ -72,9 +72,7 @@ export default function ClassmatesPage() {
         Back to Dashboard
       </Link>
       <div className="mb-6">
-        <p className="text-[#63b3ed] text-xs font-mono tracking-[0.2em] uppercase mb-1">
-          クラスメート
-        </p>
+        
         <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
           Classmates
         </h1>

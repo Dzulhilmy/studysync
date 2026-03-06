@@ -87,9 +87,7 @@ export default function ProjectsPage() {
         Back to Dashboard
       </Link>
       <div className="mb-6">
-        <p className="text-[#c0392b] text-xs font-mono tracking-[0.2em] uppercase mb-1">
-          プロジェクト承認
-        </p>
+        
         <h1 className="text-2xl font-bold text-[#1a1209] font-serif">
           Project Approval
         </h1>

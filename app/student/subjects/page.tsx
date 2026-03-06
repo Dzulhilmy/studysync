@@ -22,7 +22,6 @@ interface Subject {
 
 const TYPE_ICON: Record<string, string> = { pdf: '📄', video: '🎬', link: '🔗', doc: '📝' }
 
-// Force PDF download instead of inline rendering (avoids browser PDF viewer CORS issues)
 function getFileUrl(url: string, type: string): string {
   if (!url) return url
   const isPdf = type === 'pdf' || url.toLowerCase().includes('.pdf')
@@ -32,18 +31,19 @@ function getFileUrl(url: string, type: string): string {
   return url
 }
 
+// ── Status badge config — no grade shown anywhere ─────────────────────────────
 const SUBMIT_STATUS: Record<string, { label: string; Icon?: React.ComponentType<any>; color: string }> = {
-  draft:     { label: 'Draft', Icon: IconDraft,     color: 'text-[#8b5a2b] bg-[rgba(139,90,43,0.08)] border-[rgba(139,90,43,0.25)]' },
-  submitted: { label: 'Submitted', Icon: IconSubmitted, color: 'text-[#1a7a6e] bg-[rgba(26,122,110,0.08)] border-[rgba(26,122,110,0.25)]' },
-  graded:    { label: 'Graded', Icon: IconApproved,    color: 'text-[#d4a843] bg-[rgba(212,168,67,0.1)] border-[rgba(212,168,67,0.3)]' },
-  none:      { label: '⭕ Not submitted', color: 'text-[#c0392b] bg-[rgba(192,57,43,0.06)] border-[rgba(192,57,43,0.2)]' },
+  draft:     { label: 'Draft',          Icon: IconDraft,      color: 'text-[#8b5a2b] bg-[rgba(139,90,43,0.08)] border-[rgba(139,90,43,0.25)]'   },
+  submitted: { label: 'Submitted',      Icon: IconSubmitted,  color: 'text-[#1a7a6e] bg-[rgba(26,122,110,0.08)] border-[rgba(26,122,110,0.25)]'  },
+  graded:    { label: 'Graded',         Icon: IconApproved,   color: 'text-[#8b5a2b] bg-[rgba(212,168,67,0.06)] border-[rgba(212,168,67,0.3)]'   },
+  none:      { label: '⭕ Not submitted',                      color: 'text-[#c0392b] bg-[rgba(192,57,43,0.06)] border-[rgba(192,57,43,0.2)]'     },
 }
 
 export default function StudentSubjectsPage() {
   const [subjects, setSubjects] = useState<Subject[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading,  setLoading]  = useState(true)
   const [selected, setSelected] = useState<Subject | null>(null)
-  const [tab, setTab] = useState<'projects' | 'materials'>('projects')
+  const [tab,      setTab]      = useState<'projects' | 'materials'>('projects')
 
   useEffect(() => {
     fetch('/api/student/subjects')
@@ -70,23 +70,16 @@ export default function StudentSubjectsPage() {
 
   return (
     <div>
-      <Link
-        href="/student"
-        className="inline-flex items-center gap-2 text-xs font-mono text-[#7a6a52] hover:text-[#63b3ed] mb-6 group transition-colors"
-      >
-        <span className="text-base leading-none group-hover:-translate-x-1 transition-transform">
-          ←
-        </span>
+      <Link href="/student"
+        className="inline-flex items-center gap-2 text-xs font-mono text-[#7a6a52] hover:text-[#63b3ed] mb-6 group transition-colors">
+        <span className="text-base leading-none group-hover:-translate-x-1 transition-transform">←</span>
         Back to Dashboard
       </Link>
+
       <div className="mb-6">
-        <p className="text-[#63b3ed] text-xs font-mono tracking-[0.2em] uppercase mb-1">科目</p>
-        <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
-          My Subjects
-        </h1>
-        <p className="text-[#7a6a52] text-sm mt-1">
-          View your enrolled subjects, projects, and learning materials.
-        </p>
+        
+        <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>My Subjects</h1>
+        <p className="text-[#7a6a52] text-sm mt-1">View your enrolled subjects, projects, and learning materials.</p>
         <RealTimeClock accentColor="#63b3ed" />
       </div>
 
@@ -103,15 +96,13 @@ export default function StudentSubjectsPage() {
           {/* ── Subject list ── */}
           <div className="lg:col-span-2 space-y-2">
             {subjects.map((s) => (
-              <button
-                key={s._id}
+              <button key={s._id}
                 onClick={() => { setSelected(s); setTab('projects') }}
                 className={`w-full text-left p-4 border rounded-sm transition-all ${
                   selected?._id === s._id
                     ? 'bg-[#1a2535] border-[rgba(99,179,237,0.4)] shadow-[3px_3px_0_rgba(26,37,53,0.4)]'
                     : 'bg-white border-[#c8b89a] hover:border-[#63b3ed] shadow-[2px_2px_0_#c8b89a]'
-                }`}
-              >
+                }`}>
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className={`text-xs font-mono ${selected?._id === s._id ? 'text-[#d4a843]' : 'text-[#c0392b]'}`}>
@@ -121,7 +112,7 @@ export default function StudentSubjectsPage() {
                       style={{ fontFamily: 'Georgia, serif' }}>
                       {s.name}
                     </div>
-                    <div className={`text-xs mt-0.5 ${selected?._id === s._id ? 'text-[rgba(250,246,238,0.4)]' : 'text-[#7a6a52]'}`}>
+                    <div className={`text-xs mt-0.5 flex items-center gap-1 ${selected?._id === s._id ? 'text-[rgba(250,246,238,0.4)]' : 'text-[#7a6a52]'}`}>
                       <IconTeacher size={12} color="currentColor" /> {s.teacher?.name ?? 'No teacher'}
                     </div>
                   </div>
@@ -147,11 +138,11 @@ export default function StudentSubjectsPage() {
                   {(['projects', 'materials'] as const).map((t) => (
                     <button key={t} onClick={() => setTab(t)}
                       className={`px-4 py-1.5 text-xs font-mono uppercase tracking-wider rounded-sm transition-all ${
-                        tab === t
-                          ? 'bg-[#1a2535] text-[#63b3ed]'
-                          : 'text-[#7a6a52] hover:text-[#1a1209]'
+                        tab === t ? 'bg-[#1a2535] text-[#63b3ed]' : 'text-[#7a6a52] hover:text-[#1a1209]'
                       }`}>
-                      {t === 'projects' ? `🗂 Projects (${selected.projects.length})` : `📖 Materials (${selected.materials.length})`}
+                      {t === 'projects'
+                        ? `🗂 Projects (${selected.projects.length})`
+                        : `📖 Materials (${selected.materials.length})`}
                     </button>
                   ))}
                 </div>
@@ -166,26 +157,34 @@ export default function StudentSubjectsPage() {
                       </div>
                     ) : selected.projects.map((p) => {
                       const subStatus = p.submission?.status ?? 'none'
-                      const st = SUBMIT_STATUS[subStatus] ?? SUBMIT_STATUS.none
-                      const daysLeft = Math.ceil((new Date(p.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-                      const overdue = daysLeft < 0
+                      const st        = SUBMIT_STATUS[subStatus] ?? SUBMIT_STATUS.none
+                      const daysLeft  = Math.ceil((new Date(p.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                      const overdue   = daysLeft < 0
+
                       return (
                         <div key={p._id}
                           className="bg-white border border-[#c8b89a] rounded-sm p-4 shadow-[3px_3px_0_#c8b89a] hover:shadow-[4px_4px_0_#c8b89a] transition-all">
                           <div className="flex items-start justify-between gap-3 flex-wrap">
                             <div>
-                              <h3 className="font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>{p.title}</h3>
-                              <div className="flex gap-3 mt-1 text-xs text-[#7a6a52] font-mono flex-wrap">
+                              <h3 className="font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
+                                {p.title}
+                              </h3>
+                              {/* ── Meta row: deadline + max score only — grade intentionally hidden ── */}
+                              <div className="flex gap-3 mt-1 text-xs text-[#7a6a52] font-mono flex-wrap items-center">
                                 <span className={overdue && subStatus === 'none' ? 'text-[#c0392b] font-bold' : ''}>
-                                  📅 {overdue ? 'Overdue' : `${daysLeft}d left`} · {new Date(p.deadline).toLocaleDateString()}
+                                  📅 {overdue
+                                    ? `${Math.abs(daysLeft)}d ago`
+                                    : daysLeft === 0 ? 'Due today' : `${daysLeft}d left`
+                                  } · {new Date(p.deadline).toLocaleDateString()}
                                 </span>
                                 <span>🏆 {p.maxScore}pts max</span>
-                                {p.submission?.grade !== undefined && (
-                                  <span className="text-[#1a7a6e] font-bold">✅ Grade: {p.submission.grade}pts</span>
-                                )}
                               </div>
                             </div>
-                            <span className={`text-xs font-mono px-2 py-0.5 border rounded-sm shrink-0 ${st.color}`}>{st.label}</span>
+                            {/* Status badge — "Graded" shows without score */}
+                            <span className={`text-xs font-mono px-2 py-0.5 border rounded-sm shrink-0 flex items-center gap-1 ${st.color}`}>
+                              {st.Icon && <st.Icon size={11} color="currentColor" />}
+                              {st.label}
+                            </span>
                           </div>
                         </div>
                       )
@@ -215,8 +214,7 @@ export default function StudentSubjectsPage() {
                                 <div className="text-sm font-semibold text-[#1a1209] truncate">{m.title}</div>
                                 <div className="text-xs text-[#7a6a52] font-mono">{m.type.toUpperCase()}</div>
                               </div>
-                              {/* Download / open button */}
-                              <a href={m.url} target="_blank" rel="noreferrer"
+                              <a href={getFileUrl(m.url, m.type)} target="_blank" rel="noreferrer"
                                 className="text-xs px-3 py-1.5 bg-[#1a2535] text-[#63b3ed] border border-[rgba(99,179,237,0.3)] rounded-sm hover:bg-[#243040] transition-colors font-semibold opacity-0 group-hover:opacity-100">
                                 {m.type === 'pdf' ? '⬇ Download' : '↗ Open'}
                               </a>

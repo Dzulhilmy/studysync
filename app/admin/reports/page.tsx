@@ -316,7 +316,7 @@ export default function AdminReportsPage() {
       </Link>
 
       <div className="mb-6">
-        <p className="text-[#c0392b] text-xs font-mono tracking-[0.2em] uppercase mb-1">レポート管理</p>
+        
         <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: "Georgia, serif" }}>Monthly Reports</h1>
         <p className="text-[#7a6a52] text-sm mt-1">Review submitted monthly reports from all teachers.</p>
         <RealTimeClock accentColor="#d4a843" />

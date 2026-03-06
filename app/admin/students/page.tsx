@@ -127,7 +127,7 @@ export default function StudentsPage() {
         Back to Dashboard
       </Link>
       <div className="mb-6">
-        <p className="text-[#c0392b] text-xs font-mono tracking-[0.2em] uppercase mb-1">学生管理</p>
+        
         <h1 className="text-2xl font-bold text-[#1a1209] font-serif">Student Management</h1>
         <p className="text-[#7a6a52] text-sm mt-1">Select a subject to manage student enrollment.</p>
       </div>

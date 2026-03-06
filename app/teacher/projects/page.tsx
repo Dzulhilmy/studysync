@@ -299,7 +299,7 @@ export default function TeacherProjectsPage() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <p className="text-[#1a7a6e] text-xs font-mono tracking-[0.2em] uppercase mb-1">プロジェクト管理</p>
+          
           <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>Project Management</h1>
         </div>
         <RealTimeClock accentColor="#1a7a6e" />

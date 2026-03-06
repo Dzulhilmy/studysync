@@ -252,9 +252,7 @@ export default function LoginPage() {
 
           {/* Header */}
           <div className="px-8 pt-8 pb-5 text-center border-b border-[rgba(212,168,67,0.15)]">
-            <p className="text-[#d4a843] text-xs font-mono tracking-[0.3em] uppercase mb-2 opacity-60">
-              スタディシンク
-            </p>
+            
             <h1 className="text-[#faf6ee] text-4xl font-bold tracking-tight leading-none"
               style={{ fontFamily: 'Georgia, serif' }}>
               Study<span className="text-[#d4a843]">Sync</span>
