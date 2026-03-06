@@ -42,6 +42,22 @@ export const authOptions: NextAuthOptions = {
   ],
 
   callbacks: {
+    // ── ADD THIS: update lastLoginAt every time a student logs in ──────────────
+    async signIn({ user }) {
+      try {
+        await connectDB()
+        await User.findByIdAndUpdate(
+          (user as any).id,
+          { lastLoginAt: new Date() },
+          { new: false }   // we don't need the result
+        )
+      } catch (err) {
+        // Never block login because of this
+        console.error('[AUTH] Failed to update lastLoginAt:', err)
+      }
+      return true   // always allow the sign-in
+    },
+    // ─────────────────────────────────────────────────────────────────────────
     async jwt({ token, user }) {
       // On sign in, attach role + id to token
       if (user) {

@@ -1,195 +1,147 @@
 /**
  * FILE: app/api/student/submissions/route.ts
  *
- * GET   → Returns all submissions for the logged-in student (across all projects).
- * POST  → Create a new submission for a project.
- *          status: 'draft'     = saved but not submitted yet
- *          status: 'submitted' = officially submitted for grading
- * PATCH → Edit an existing submission (update file URL, text, or status).
- *          Also used to: submit a draft, or resubmit after rejection.
+ * EMAIL TRIGGER ADDED:
+ *   POST (new submission, not draft) → email to the project's teacher
+ *   PATCH (update, not draft)        → email to the project's teacher
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import connectDB from '@/lib/db'
-import Submission from '@/models/Submission'
-import Project from '@/models/Project'
-import Subject from '@/models/Subject'
-import User from '@/models/User'
-import { createNotification } from '@/lib/notifications'
+import { NextRequest, NextResponse }       from 'next/server'
+import { getServerSession }                from 'next-auth'
+import { authOptions }                     from '@/lib/auth'
+import connectDB                           from '@/lib/db'
+import Submission                          from '@/models/Submission'
+import Project                             from '@/models/Project'
+import Subject                             from '@/models/Subject'
+import User                                from '@/models/User'
+import { sendSubmissionNotification }      from '@/lib/email'   // ← ADD
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /api/student/submissions
-// Returns all of this student's submissions (for the dashboard and project pages)
-// ─────────────────────────────────────────────────────────────────────────────
-export async function GET() {
-  const session = await getServerSession(authOptions)
-  if (!session || (session.user as any).role !== 'student') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  await connectDB()
-
-  const submissions = await Submission.find({ student: (session.user as any).id })
-    .populate({
-      path: 'project',
-      populate: { path: 'subject', select: 'name code' }, // nested populate: project → subject
-    })
-    .sort({ updatedAt: -1 })
-
-  return NextResponse.json(submissions)
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /api/student/submissions
-// Creates a new submission for a project
-// Body: { projectId, fileUrl?, textResponse?, isDraft }
-//   isDraft: true  → save as draft (student can edit later)
-//   isDraft: false → officially submit
-// ─────────────────────────────────────────────────────────────────────────────
+// ── POST: create submission ───────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any).role !== 'student') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-
   await connectDB()
 
-  const studentId = (session.user as any).id
   const { projectId, fileUrl, textResponse, isDraft } = await req.json()
 
-  if (!projectId) {
-    return NextResponse.json({ error: 'Project ID is required' }, { status: 400 })
-  }
+  const project = await Project.findById(projectId).populate('teacher subject')
+  if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 
-  // Check if the student already has a submission for this project
-  const existing = await Submission.findOne({ project: projectId, student: studentId })
-  if (existing) {
-    return NextResponse.json({ error: 'You already have a submission for this project' }, { status: 400 })
-  }
-
-  // Find the project to check the deadline (for late detection)
-  const project = await Project.findById(projectId)
-  if (!project) {
-    return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-  }
-
-  // Is the submission late? (only relevant if actually submitting, not drafting)
-  const isLate = !isDraft && new Date() > new Date(project.deadline)
+  const isLate = new Date() > new Date(project.deadline)
 
   const submission = await Submission.create({
-    project: projectId,
-    student: studentId,
-    fileUrl: fileUrl || '',
-    textResponse: textResponse || '',
-    submittedAt: isDraft ? null : new Date(),
+    student:      (session.user as any).id,
+    project:      projectId,
+    fileUrl:      fileUrl ?? null,
+    textResponse: textResponse ?? '',
+    status:       isDraft ? 'draft' : 'submitted',
     isLate,
-    status: isDraft ? 'draft' : 'submitted',
+    submittedAt:  isDraft ? null : new Date(),
   })
 
-  // Notify the project's teacher that a submission was received (not for drafts)
-  if (!isDraft && project) {
-    const subject = await Subject.findById(project.subject)
-    if (subject?.teacher) {
-      const student = await User.findById(studentId, 'name')
-      await createNotification({
-        recipient: subject.teacher.toString(),
-        type:      'submission_received',
-        title:     '📥 New Submission',
-        message:   `${student?.name ?? 'A student'} submitted "${project.title}".`,
-        link:      '/teacher/students',
-      })
+  // ── EMAIL: only for actual submissions (not drafts) ──────────────────────────
+  if (!isDraft) {
+    try {
+      const [student, teacher] = await Promise.all([
+        User.findById((session.user as any).id).lean() as any,
+        User.findById(project.teacher?._id ?? project.teacher).lean() as any,
+      ])
+
+      if (teacher?.email) {
+        await sendSubmissionNotification(teacher.email, {
+          teacherName:  teacher.name,
+          studentName:  student?.name  ?? session.user?.name  ?? 'A student',
+          studentEmail: student?.email ?? session.user?.email ?? '',
+          projectTitle: project.title,
+          subjectName:  (project.subject as any)?.name ?? '—',
+          subjectCode:  (project.subject as any)?.code ?? '—',
+          submittedAt:  new Date().toISOString(),
+          isLate,
+        })
+      }
+    } catch (emailErr) {
+      console.error('[EMAIL] Failed to notify teacher of submission:', emailErr)
     }
   }
+  // ── END EMAIL ────────────────────────────────────────────────────────────────
 
   return NextResponse.json(submission, { status: 201 })
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PATCH /api/student/submissions
-// Update an existing submission — edit file, submit a draft, or resubmit
-// Body: { submissionId, fileUrl?, textResponse?, isDraft }
-// ─────────────────────────────────────────────────────────────────────────────
+// ── PATCH: update submission ──────────────────────────────────────────────────
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any).role !== 'student') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-
   await connectDB()
 
-  const studentId = (session.user as any).id
   const { submissionId, fileUrl, textResponse, isDraft } = await req.json()
 
-  // Find the submission — must belong to this student
-  const submission = await Submission.findOne({ _id: submissionId, student: studentId })
-  if (!submission) {
-    return NextResponse.json({ error: 'Submission not found' }, { status: 404 })
-  }
+  const existing = await Submission.findOne({
+    _id: submissionId,
+    student: (session.user as any).id,
+  })
+  if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // Find the project to check deadline
-  const project = await Project.findById(submission.project)
-  const isLate = !isDraft && project ? new Date() > new Date(project.deadline) : false
+  const project = await Project.findById(existing.project).populate('teacher subject')
+  if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
 
-  // Build the update
-  const update: any = {
-    fileUrl: fileUrl ?? submission.fileUrl,
-    textResponse: textResponse ?? submission.textResponse,
-    status: isDraft ? 'draft' : 'submitted',
-    isLate,
-    submittedAt: isDraft ? submission.submittedAt : new Date(),
-  }
+  const wasAlreadySubmitted = existing.status === 'submitted' || existing.status === 'graded'
+  const isLate = new Date() > new Date(project.deadline)
 
-  const updated = await Submission.findByIdAndUpdate(submissionId, update, { new: true })
+  existing.fileUrl      = fileUrl      ?? existing.fileUrl
+  existing.textResponse = textResponse ?? existing.textResponse
+  existing.status       = isDraft ? 'draft' : 'submitted'
+  existing.isLate       = isLate
+  if (!isDraft) existing.submittedAt = new Date()
+  await existing.save()
 
-  // Notify teacher only when transitioning from draft → submitted
-  if (!isDraft && submission.status === 'draft' && project) {
-    const subject = await Subject.findById(project.subject)
-    if (subject?.teacher) {
-      const student = await User.findById(studentId, 'name')
-      await createNotification({
-        recipient: subject.teacher.toString(),
-        type:      'submission_received',
-        title:     '📥 Submission Received',
-        message:   `${student?.name ?? 'A student'} submitted "${project.title}".`,
-        link:      '/teacher/students',
-      })
+  // ── EMAIL: notify teacher only when going from draft → submitted ─────────────
+  if (!isDraft && !wasAlreadySubmitted) {
+    try {
+      const [student, teacher] = await Promise.all([
+        User.findById((session.user as any).id).lean() as any,
+        User.findById(project.teacher?._id ?? project.teacher).lean() as any,
+      ])
+
+      if (teacher?.email) {
+        await sendSubmissionNotification(teacher.email, {
+          teacherName:  teacher.name,
+          studentName:  student?.name  ?? session.user?.name  ?? 'A student',
+          studentEmail: student?.email ?? session.user?.email ?? '',
+          projectTitle: project.title,
+          subjectName:  (project.subject as any)?.name ?? '—',
+          subjectCode:  (project.subject as any)?.code ?? '—',
+          submittedAt:  new Date().toISOString(),
+          isLate,
+        })
+      }
+    } catch (emailErr) {
+      console.error('[EMAIL] Failed to notify teacher of updated submission:', emailErr)
     }
   }
+  // ── END EMAIL ────────────────────────────────────────────────────────────────
 
-  return NextResponse.json(updated)
+  return NextResponse.json(existing)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DELETE /api/student/submissions
-// Remove a submission (only allowed if it's a draft or not yet graded)
-// Body: { submissionId }
-// ─────────────────────────────────────────────────────────────────────────────
+// ── DELETE: remove submission ─────────────────────────────────────────────────
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any).role !== 'student') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-
   await connectDB()
 
   const { submissionId } = await req.json()
-
-  // Only allow deletion if status is 'draft' or 'submitted' (not graded)
-  const submission = await Submission.findOne({
+  await Submission.findOneAndDelete({
     _id: submissionId,
     student: (session.user as any).id,
+    status: { $ne: 'graded' },  // can't delete graded submissions
   })
 
-  if (!submission) {
-    return NextResponse.json({ error: 'Submission not found' }, { status: 404 })
-  }
-
-  if (submission.status === 'graded') {
-    return NextResponse.json({ error: 'Cannot delete a graded submission' }, { status: 403 })
-  }
-
-  await Submission.findByIdAndDelete(submissionId)
   return NextResponse.json({ success: true })
 }

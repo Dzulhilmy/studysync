@@ -1,46 +1,75 @@
 /**
- * FILE: app/api/teacher/projects/[id]/route.ts
- * 
- * PATCH  → Edit a project (only allowed if status is "pending" or "rejected").
- *           Resets status back to "pending" so admin reviews the updated version.
- * DELETE → Permanently delete a project the teacher owns.
+ * FILE: app/api/admin/projects/[id]/route.ts   (or wherever you approve projects)
+ *
+ * EMAIL TRIGGER ADDED:
+ *   PATCH status → 'approved'  → email to ALL enrolled students in that subject
+ *
+ * Adjust the import path and field names to match your actual model.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import connectDB from '@/lib/db'
-import Project from '@/models/Project'
+import { NextRequest, NextResponse }   from 'next/server'
+import { getServerSession }            from 'next-auth'
+import { authOptions }                 from '@/lib/auth'
+import connectDB                       from '@/lib/db'
+import Project                         from '@/models/Project'
+import Subject                         from '@/models/Subject'
+import User                            from '@/models/User'
+import { sendNewProjectEmail }         from '@/lib/email'   // ← ADD
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
   const session = await getServerSession(authOptions)
-  if (!session || (session.user as any).role !== 'teacher') {
+  if (!session || (session.user as any).role !== 'admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   await connectDB()
-  const { id } = await params
-  const body = await req.json()
-  // Only allow editing if project was rejected or still pending
-  const project = await Project.findOne({ _id: id, createdBy: (session.user as any).id })
-  if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  const updated = await Project.findByIdAndUpdate(
-    id,
-    { ...body, status: 'pending', adminNote: '' }, // resubmit resets to pending
+
+  const { status, adminNote } = await req.json()
+
+  const project = await Project.findByIdAndUpdate(
+    params.id,
+    { status, adminNote: adminNote ?? '' },
     { new: true }
-  ).populate('subject', 'name code')
-  return NextResponse.json(updated)
-}
+  ).populate('subject teacher')
 
-export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions)
-  if (!session || (session.user as any).role !== 'teacher') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  // ── EMAIL: project approved → notify every enrolled student ─────────────────
+  if (status === 'approved') {
+    try {
+      // Get subject with enrolled students
+      // ⚠️  Change 'students' to your Subject field name if different
+      const subject = await Subject.findById(project.subject)
+        .populate('students', 'name email')
+        .lean() as any
+
+      const enrolledStudents: { name: string; email: string }[] =
+        subject?.students ?? subject?.enrollments ?? []
+
+      const deadlineStr = project.deadline instanceof Date
+        ? project.deadline.toISOString()
+        : String(project.deadline)
+
+      for (const student of enrolledStudents) {
+        await sendNewProjectEmail(student.email, {
+          studentName:  student.name,
+          projectTitle: project.title,
+          subjectName:  subject?.name ?? '—',
+          subjectCode:  subject?.code ?? '—',
+          deadline:     deadlineStr,
+          maxScore:     project.maxScore,
+          description:  project.description,
+        })
+      }
+
+      console.log(`[EMAIL] Sent new project emails to ${enrolledStudents.length} student(s)`)
+    } catch (emailErr) {
+      console.error('[EMAIL] Failed to send project approval emails:', emailErr)
+    }
   }
-  await connectDB()
-  const { id } = await params
-  // Find by _id only — route is already auth-protected as teacher
-  // Avoid createdBy string vs ObjectId mismatch causing silent delete failure
-  const deleted = await Project.findByIdAndDelete(id)
-  if (!deleted) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-  return NextResponse.json({ success: true })
+  // ── END EMAIL ────────────────────────────────────────────────────────────────
+
+  return NextResponse.json(project)
 }
