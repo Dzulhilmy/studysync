@@ -18,7 +18,7 @@ import { sendNewProjectEmail }         from '@/lib/email'
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }   // ← Next.js 15: Promise
+  { params }: { params: any }   // ← Next.js 15: Promise
 ) {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any).role !== 'admin') {
