@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import IdleTimeout from "@/components/IdleTimeout";
 import NotificationBell from "@/components/Notificationbell";
+import Avatar from "@/components/Avatar";
 import {
   IconDashboard, IconUsers, IconSubjects, IconStudents,
   IconProjects, IconReports, IconProfile, IconSignOut, IconMenu,
@@ -24,14 +25,18 @@ const navItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
+  const router   = useRouter();
   const { data: session } = useSession();
-  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const [mobileOpen,  setMobileOpen]  = useState(false);
+  const [avatarPopup, setAvatarPopup] = useState(false);
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
     router.push("/login");
   };
+
+  const avatarUrl = (session?.user as any)?.avatarUrl ?? null;
 
   return (
     <div
@@ -40,8 +45,57 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     >
       <IdleTimeout />
 
+      {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setMobileOpen(false)} />
+      )}
+
+      {/* ── Avatar popup ──────────────────────────────────────────────────── */}
+      {avatarPopup && (
+        <div
+          className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
+          onClick={() => setAvatarPopup(false)}
+        >
+          <div
+            className="bg-[#2c1810] border border-[rgba(212,168,67,0.25)] rounded-sm shadow-[6px_6px_0_rgba(0,0,0,0.4)] p-6 w-72 flex flex-col items-center gap-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <Avatar
+              src={avatarUrl}
+              name={session?.user?.name}
+              role="admin"
+              size={88}
+            />
+            <div className="text-center">
+              <div className="text-[#faf6ee] font-bold text-base" style={{ fontFamily: "Georgia, serif" }}>
+                {session?.user?.name}
+              </div>
+              <div className="text-[#d4a843] text-[10px] font-mono tracking-widest uppercase mt-0.5">
+                Administrator
+              </div>
+              <div className="text-[rgba(250,246,238,0.35)] text-xs font-mono mt-1">
+                {session?.user?.email}
+              </div>
+            </div>
+            <div className="flex gap-2 w-full pt-1">
+              <Link
+                href="/admin/profile"
+                onClick={() => setAvatarPopup(false)}
+                className="flex-1 text-center text-xs py-2 border border-[rgba(212,168,67,0.3)] text-[#d4a843]
+                           hover:bg-[rgba(212,168,67,0.1)] rounded-sm font-mono transition-colors"
+              >
+                Edit Profile
+              </Link>
+              <button
+                onClick={() => setAvatarPopup(false)}
+                className="flex-1 text-xs py-2 border border-[rgba(250,246,238,0.15)] text-[rgba(250,246,238,0.45)]
+                           hover:bg-[rgba(250,246,238,0.05)] rounded-sm font-mono transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── SIDEBAR ── */}
@@ -52,7 +106,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0 lg:sticky lg:z-auto
       `}>
-
         {/* Logo */}
         <div className="px-6 pt-7 pb-5 border-b border-[rgba(212,168,67,0.12)]">
           <div className="flex flex-col items-start gap-2">
@@ -60,49 +113,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <div className="w-12 h-12 flex-shrink-0">
                 <Image src="/Image_Logo.png" alt="StudySync Crest" width={40} height={40} style={{ objectFit: "contain" }} />
               </div>
-              <span
-                style={{
-                  fontFamily: "Noto Serif JP,serif",
-                  fontWeight: 900,
-                  fontSize: "1.18rem",
-                  color: "#faf6ee",
-                  letterSpacing: "-.01em",
-                }}
-              >
+              <span style={{ fontFamily: "Noto Serif JP,serif", fontWeight: 900, fontSize: "1.18rem", color: "#faf6ee", letterSpacing: "-.01em" }}>
                 Study
               </span>
-              <span
-                style={{
-                  fontFamily: "Noto Serif JP,serif",
-                  fontWeight: 900,                  
-                  fontSize: "1.18rem",
-                  color: "transparent",
-                  WebkitTextStroke: "2px #d4a843",
-                  textShadow: "0 0 100px rgba(212,168,67,.12)",
-                }}
-              >
+              <span style={{ fontFamily: "Noto Serif JP,serif", fontWeight: 900, fontSize: "1.18rem", color: "transparent", WebkitTextStroke: "2px #d4a843", textShadow: "0 0 100px rgba(212,168,67,.12)" }}>
                 Sync
               </span>
             </div>
-            <div className="text-[rgba(212,168,67,0.35)] text-[10px] font-mono tracking-widest mt-0.5">Administrator Portal</div>
+            <div className="text-[rgba(212,168,67,0.35)] text-[10px] font-mono tracking-widest mt-0.5">
+              Administrator Portal
+            </div>
           </div>
         </div>
 
-        {/* Nav items */}
+        {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {navItems.map(({ href, label, Icon, jp }) => {
-            const active = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
-            const iconColor = active ? "#d4a843" : "rgba(250,246,238,0.5)";
+            const active     = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
+            const iconColor  = active ? "#d4a843" : "rgba(250,246,238,0.5)";
             return (
               <Link
                 key={href} href={href} onClick={() => setMobileOpen(false)}
-                className={`
-                  flex items-center gap-3 px-4 py-2.5 rounded-sm group transition-all duration-150
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-sm group transition-all duration-150
                   ${active
                     ? "bg-[rgba(212,168,67,0.15)] border border-[rgba(212,168,67,0.25)]"
                     : "hover:bg-[rgba(250,246,238,0.05)] border border-transparent"
-                  }
-                `}
+                  }`}
               >
                 <span className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
                   <Icon size={18} color={iconColor} />
@@ -120,19 +156,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* User info + logout */}
+        {/* ── Bottom: clickable avatar row + sign out ── */}
         <div className="p-4 border-t border-[rgba(212,168,67,0.12)]">
-          <div className="flex items-center gap-3 mb-3 px-2">
-            <div className="w-8 h-8 rounded-sm bg-[rgba(212,168,67,0.15)] border border-[rgba(212,168,67,0.3)] flex items-center justify-center text-[#d4a843] text-sm font-bold">
-              {session?.user?.name?.[0] ?? "A"}
-            </div>
-            <div className="min-w-0">
-              <div className="text-[rgba(250,246,238,0.8)] text-xs font-semibold truncate">{session?.user?.name}</div>
+          {/* Click avatar → popup */}
+          <button
+            onClick={() => setAvatarPopup(true)}
+            className="w-full flex items-center gap-3 mb-3 px-2 py-2 rounded-sm
+                       hover:bg-[rgba(212,168,67,0.08)] transition-colors group"
+          >
+            <Avatar
+              src={avatarUrl}
+              name={session?.user?.name}
+              role="admin"
+              size={34}
+            />
+            <div className="min-w-0 flex-1 text-left">
+              <div className="text-[rgba(250,246,238,0.8)] text-xs font-semibold truncate">
+                {session?.user?.name}
+              </div>
               <div className="text-[rgba(212,168,67,0.4)] text-[10px] font-mono">Administrator</div>
             </div>
-          </div>
-          <button onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-4 py-2 text-[rgba(192,57,43,0.7)] hover:text-[#c0392b] hover:bg-[rgba(192,57,43,0.08)] rounded-sm transition-all text-xs font-semibold border border-transparent hover:border-[rgba(192,57,43,0.2)]">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+              className="opacity-0 group-hover:opacity-50 transition-opacity shrink-0">
+              <path d="M4 5l2 2 2-2" stroke="#d4a843" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-4 py-2 text-[rgba(192,57,43,0.7)] hover:text-[#c0392b]
+                       hover:bg-[rgba(192,57,43,0.08)] rounded-sm transition-all text-xs font-semibold
+                       border border-transparent hover:border-[rgba(192,57,43,0.2)]"
+          >
             <IconSignOut size={15} color="currentColor" />
             Sign Out
           </button>
@@ -146,8 +201,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="text-[#faf6ee] font-bold" style={{ fontFamily: "Georgia, serif" }}>
             Study<span className="text-[#d4a843]">Sync</span>
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <NotificationBell />
+            <button onClick={() => setAvatarPopup(true)}>
+              <Avatar src={avatarUrl} name={session?.user?.name} role="admin" size={30} />
+            </button>
             <button onClick={() => setMobileOpen(true)} className="p-1" aria-label="Open menu">
               <IconMenu size={20} color="rgba(250,246,238,0.6)" />
             </button>
