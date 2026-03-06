@@ -64,6 +64,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id
         token.role = (user as any).role
         token.avatar = (user as any).avatar
+        token.avatarUrl = (user as any).avatarUrl
       }
       return token
     },
@@ -73,6 +74,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id
         ;(session.user as any).role = token.role
         ;(session.user as any).avatar = token.avatar
+        ;(session.user as any).avatarUrl = token.avatarUrl  // ← add this
       }
       return session
     },

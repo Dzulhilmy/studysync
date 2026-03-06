@@ -6,12 +6,15 @@ declare module 'next-auth' {
       id: string
       role: 'admin' | 'teacher' | 'student'
       avatar?: string
+      avatarUrl?: string
     } & DefaultSession['user']
+    
   }
 
   interface User {
     role: 'admin' | 'teacher' | 'student'
     avatar?: string
+    avatarUrl?: string
   }
 }
 
@@ -20,5 +23,6 @@ declare module 'next-auth/jwt' {
     id: string
     role: 'admin' | 'teacher' | 'student'
     avatar?: string
+    avatarUrl?: string
   }
 }
