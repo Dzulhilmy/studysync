@@ -7,7 +7,7 @@ import bcrypt                        from 'bcryptjs'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: any }
 ) {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any).role !== 'admin') {
@@ -22,7 +22,7 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: any }
 ) {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any).role !== 'admin') {
@@ -48,7 +48,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: any }
 ) {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any).role !== 'admin') {
