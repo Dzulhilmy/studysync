@@ -1,10 +1,10 @@
 /**
- * FILE: app/api/admin/projects/[id]/route.ts   (or wherever you approve projects)
+ * FILE: app/api/teacher/projects/[id]/route.ts
  *
- * EMAIL TRIGGER ADDED:
- *   PATCH status → 'approved'  → email to ALL enrolled students in that subject
+ * FIXED for Next.js 15: params is now a Promise — must be awaited.
  *
- * Adjust the import path and field names to match your actual model.
+ * EMAIL TRIGGER:
+ *   PATCH status → 'approved' → emails all enrolled students
  */
 
 import { NextRequest, NextResponse }   from 'next/server'
@@ -14,11 +14,11 @@ import connectDB                       from '@/lib/db'
 import Project                         from '@/models/Project'
 import Subject                         from '@/models/Subject'
 import User                            from '@/models/User'
-import { sendNewProjectEmail }         from '@/lib/email'   // ← ADD
+import { sendNewProjectEmail }         from '@/lib/email'
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }   // ← Next.js 15: Promise
 ) {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any).role !== 'admin') {
@@ -26,10 +26,11 @@ export async function PATCH(
   }
   await connectDB()
 
+  const { id } = await params                         // ← must await
   const { status, adminNote } = await req.json()
 
   const project = await Project.findByIdAndUpdate(
-    params.id,
+    id,
     { status, adminNote: adminNote ?? '' },
     { new: true }
   ).populate('subject teacher')
@@ -39,11 +40,9 @@ export async function PATCH(
   // ── EMAIL: project approved → notify every enrolled student ─────────────────
   if (status === 'approved') {
     try {
-      // Get subject with enrolled students
-      // ⚠️  Change 'students' to your Subject field name if different
       const subject = await Subject.findById(project.subject)
         .populate('students', 'name email')
-        .lean() as any
+        .lean() as unknown as any
 
       const enrolledStudents: { name: string; email: string }[] =
         subject?.students ?? subject?.enrollments ?? []
@@ -69,7 +68,6 @@ export async function PATCH(
       console.error('[EMAIL] Failed to send project approval emails:', emailErr)
     }
   }
-  // ── END EMAIL ────────────────────────────────────────────────────────────────
 
   return NextResponse.json(project)
 }
