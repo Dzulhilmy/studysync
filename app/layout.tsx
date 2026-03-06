@@ -13,6 +13,10 @@ const quicksand = Quicksand({
 export const metadata: Metadata = {
   title: 'StudySync',
   description: 'Web-based learning and monitoring system for secondary school',
+   icons: {
+    icon: 'public/Image_Logo.png',        // put your logo at public/logo.png
+    apple: 'public/Image_Logo.png',       // for Apple devices
+  },
 }
 
 export default function RootLayout({
