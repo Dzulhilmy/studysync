@@ -3,6 +3,7 @@ import { Quicksand } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 import AccessibilityMenu from '@/components/AccessibilityMenu'; // 1. IMPORT IT HERE
+import { Analytics } from "@vercel/analytics/next"
 
 const quicksand = Quicksand({
   subsets: ['latin'],
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body className={`${quicksand.variable} font-sans bg-parchment text-ink`} suppressHydrationWarning>
         <Providers>{children}</Providers>
         <AccessibilityMenu />
+        <Analytics />
       </body>
     </html>
   )
