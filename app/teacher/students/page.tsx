@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import RealTimeClock from '@/components/RealTimeClock'
+import Avatar from '@/components/Avatar'
 import {
   IconClose, IconWarning, IconApproved, IconSubmitted,
   IconSave, IconPending, IconGrade, IconArrowLeft, IconInbox,
@@ -14,6 +15,7 @@ interface StudentProgress {
   _id: string; name: string; email: string
   submitted: number; graded: number; totalProjects: number
   progressPct: number; avgGrade: number | null
+  avatarUrl?: string | null
 }
 interface SubjectGroup {
   subject: { _id: string; name: string; code: string }
@@ -33,8 +35,7 @@ interface SubmissionRow {
 function ProgressBar({ pct, color }: { pct: number; color: string }) {
   return (
     <div className="w-full bg-[#f0e9d6] rounded-full h-2 overflow-hidden">
-      <div className="h-full rounded-full transition-all duration-500"
-        style={{ width: `${pct}%`, background: color }} />
+      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
     </div>
   )
 }
@@ -75,6 +76,7 @@ function GradingPanel({
 }) {
   const [rows,    setRows]    = useState<SubmissionRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [inputs,  setInputs]  = useState<Record<string, {
     grade: string; feedback: string; saving: boolean; saved: boolean; error: string
   }>>({})
@@ -84,10 +86,7 @@ function GradingPanel({
     setLoading(true)
     fetch(`/api/teacher/students/submissions?studentId=${student._id}&subjectId=${subjectId}`)
       .then(async r => {
-        if (!r.ok) {
-          const err = await r.json().catch(() => ({}))
-          throw new Error(err.error ?? `HTTP ${r.status}`)
-        }
+        if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error(err.error ?? `HTTP ${r.status}`) }
         return r.json()
       })
       .then((data: SubmissionRow[]) => {
@@ -96,7 +95,7 @@ function GradingPanel({
         data.forEach(row => {
           if (row.submission) {
             init[row.submission._id] = {
-              grade:    row.submission.grade?.toString() ?? '',
+              grade: row.submission.grade?.toString() ?? '',
               feedback: row.submission.feedback ?? '',
               saving: false, saved: false, error: '',
             }
@@ -165,14 +164,17 @@ function GradingPanel({
           animation: 'slideIn .28s cubic-bezier(.22,1,.36,1)',
         }}>
 
-        {/* Header */}
+        {/* ── Header: Avatar + name ──────────────────────────────────── */}
         <div className="px-6 pt-5 pb-4 border-b border-[#c8b89a] shrink-0" style={{ background: '#1a3a2a' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-sm border border-[rgba(212,168,67,0.3)] flex items-center justify-center text-base font-bold text-[#d4a843]"
-                style={{ background: 'rgba(212,168,67,0.1)' }}>
-                {student.name[0]}
-              </div>
+              {/* Avatar replaces the letter box */}
+              <Avatar
+                src={student.avatarUrl}
+                name={student.name}
+                role="student"
+                size={40}
+              />
               <div>
                 <div className="font-bold text-[#faf6ee] text-sm flex items-center gap-1.5" style={{ fontFamily: 'Georgia, serif' }}>
                   <IconStudents color="currentColor" size={14} />
@@ -251,7 +253,6 @@ function GradingPanel({
                             boxShadow:  '2px 2px 0 #e8dfc8',
                           }}>
 
-                          {/* Project header */}
                           <div className="px-4 pt-3 pb-2.5 border-b border-[#f0e9d6]">
                             <div className="flex items-start justify-between gap-2 mb-1.5">
                               <div className="font-semibold text-[#1a1209] text-sm leading-snug"
@@ -265,12 +266,11 @@ function GradingPanel({
                                     <IconClock size={12} color="currentColor" /> Late
                                   </span>
                                 )}
-                                {/* ✅ FIXED — no more JSX + string concatenation */}
                                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-sm flex items-center gap-1"
                                   style={{
-                                    border:     `1px solid ${sub.status === 'graded' ? 'rgba(26,122,110,0.3)' : 'rgba(212,168,67,0.3)'}`,
-                                    color:       sub.status === 'graded' ? '#1a7a6e' : '#b8882a',
-                                    background:  sub.status === 'graded' ? 'rgba(26,122,110,0.06)' : 'rgba(212,168,67,0.06)',
+                                    border:    `1px solid ${sub.status === 'graded' ? 'rgba(26,122,110,0.3)' : 'rgba(212,168,67,0.3)'}`,
+                                    color:      sub.status === 'graded' ? '#1a7a6e' : '#b8882a',
+                                    background: sub.status === 'graded' ? 'rgba(26,122,110,0.06)' : 'rgba(212,168,67,0.06)',
                                   }}>
                                   {sub.status === 'graded'
                                     ? <><IconApproved size={11} color="currentColor" /><span>Graded</span></>
@@ -294,7 +294,6 @@ function GradingPanel({
                             </div>
                           </div>
 
-                          {/* Student response preview */}
                           {(sub.textResponse || sub.fileUrl) && (
                             <div className="px-4 py-2.5 border-b border-[#f0e9d6] bg-[#fdfcf8]">
                               {sub.textResponse && (
@@ -314,7 +313,6 @@ function GradingPanel({
                             </div>
                           )}
 
-                          {/* Grading form */}
                           <div className="px-4 py-3 space-y-3">
                             <p className="text-[10px] font-mono uppercase tracking-wider text-[#7a6a52]">Grade & Feedback</p>
                             <div className="flex gap-3 items-start">
@@ -329,8 +327,7 @@ function GradingPanel({
                                   style={{ color: '#1a1209' }}
                                 />
                                 {inp.grade !== '' && !isNaN(Number(inp.grade)) && (
-                                  <div className="mt-1 text-[10px] font-mono font-bold"
-                                    style={{ color: gradeColor(Number(inp.grade)) }}>
+                                  <div className="mt-1 text-[10px] font-mono font-bold" style={{ color: gradeColor(Number(inp.grade)) }}>
                                     {Math.round((Number(inp.grade) / row.project.maxScore) * 100)}% · {gradeLabel(Number(inp.grade))}
                                   </div>
                                 )}
@@ -348,18 +345,14 @@ function GradingPanel({
                               </div>
                             </div>
 
-                            {inp.error && (
-                              <p className="text-[11px] font-mono text-[#c0392b]">{inp.error}</p>
-                            )}
+                            {inp.error && <p className="text-[11px] font-mono text-[#c0392b]">{inp.error}</p>}
 
                             <div className="flex items-center justify-between pt-1">
-                              {/* ✅ FIXED — no more JSX + string */}
                               {inp.saved && (
                                 <span className="text-[11px] font-mono text-[#1a7a6e] flex items-center gap-1">
                                   <IconApproved size={11} color="#1a7a6e" /> Saved successfully
                                 </span>
                               )}
-                              {/* ✅ FIXED — no more JSX + string in button label */}
                               <button
                                 onClick={() => saveGrade(sub._id, row.project.maxScore)}
                                 disabled={inp.saving || inp.grade === ''}
@@ -476,9 +469,8 @@ export default function TeacherStudentsPage() {
 
       <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
         <div>
-          
           <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
-            Student Progress & Grading
+            Student Progress &amp; Grading
           </h1>
           <p className="text-[#7a6a52] text-sm mt-1">Click any student to open the grading panel.</p>
         </div>
@@ -540,15 +532,21 @@ export default function TeacherStudentsPage() {
                       onClick={() => setActiveStudent(s)}
                       className="bg-white border border-[#c8b89a] rounded-sm p-5 shadow-[3px_3px_0_#c8b89a] hover:shadow-[4px_4px_0_#1a7a6e] hover:border-[#1a7a6e] transition-all cursor-pointer group">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+
+                        {/* ── Avatar replaces the letter box ── */}
                         <div className="flex items-center gap-3 sm:w-48 shrink-0">
-                          <div className="w-9 h-9 rounded-sm bg-[#1a3a2a] border border-[rgba(26,122,110,0.4)] flex items-center justify-center text-sm font-bold text-[#d4a843]">
-                            {s.name[0]}
-                          </div>
+                          <Avatar
+                            src={s.avatarUrl}
+                            name={s.name}
+                            role="student"
+                            size={36}
+                          />
                           <div>
                             <div className="font-semibold text-[#1a1209] text-sm group-hover:text-[#1a7a6e] transition-colors">{s.name}</div>
                             <div className="text-xs text-[#7a6a52] truncate max-w-[130px]">{s.email}</div>
                           </div>
                         </div>
+
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1.5">
                             <span className="text-xs text-[#7a6a52] font-mono">Submission progress</span>
@@ -563,6 +561,7 @@ export default function TeacherStudentsPage() {
                             <span className="text-[10px] font-mono text-[#7a6a52]">{s.graded} graded</span>
                           </div>
                         </div>
+
                         <div className="shrink-0 flex items-center gap-4">
                           <div className="text-center sm:w-20">
                             <div className="text-xs font-mono text-[#7a6a52] mb-1">Avg Grade</div>
@@ -580,6 +579,7 @@ export default function TeacherStudentsPage() {
                           </div>
                         </div>
                       </div>
+
                       {s.submitted > s.graded && (
                         <div className="mt-3 pt-3 border-t border-[#f0e9d6]">
                           <span className="text-[11px] font-mono text-[#d4a843] flex items-center gap-1.5">

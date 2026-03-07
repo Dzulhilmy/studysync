@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import RealTimeClock from '@/components/RealTimeClock'
 import DashboardSearch from '@/components/DashboardSearch'
+import Avatar from '@/components/Avatar'
 import {
   IconSubjects, IconSubmitted, IconApproved, IconDraft,
   IconWarning, IconEmpty,
@@ -12,21 +13,15 @@ import {
 import { JSX } from 'react/jsx-runtime'
 
 interface Submission {
-  _id: string
-  status: string
-  isLate: boolean
-  grade?: number
+  _id: string; status: string; isLate: boolean; grade?: number
   project: {
-    _id: string
-    title: string
-    deadline: string
+    _id: string; title: string; deadline: string
     subject: { name: string; code: string }
   }
 }
 
 type IconComponent = (props: { color?: string; size?: number }) => JSX.Element
 
-// Status badge data — SVG icon instead of emoji
 const STATUS_MAP: Record<string, { Icon: IconComponent; label: string; color: string; iconColor: string }> = {
   draft:     { Icon: IconDraft,     label: 'Draft',     color: 'text-[#8b5a2b] bg-[rgba(139,90,43,0.08)] border-[rgba(139,90,43,0.25)]',   iconColor: '#8b5a2b' },
   submitted: { Icon: IconSubmitted, label: 'Submitted', color: 'text-[#1a7a6e] bg-[rgba(26,122,110,0.08)] border-[rgba(26,122,110,0.25)]', iconColor: '#1a7a6e' },
@@ -35,9 +30,11 @@ const STATUS_MAP: Record<string, { Icon: IconComponent; label: string; color: st
 
 export default function StudentDashboard() {
   const { data: session } = useSession()
-  const [submissions, setSubmissions] = useState<Submission[]>([])
+  const [submissions,  setSubmissions]  = useState<Submission[]>([])
   const [subjectCount, setSubjectCount] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [loading,      setLoading]      = useState(true)
+
+  const avatarUrl = (session?.user as any)?.avatarUrl ?? null
 
   useEffect(() => {
     async function load() {
@@ -67,22 +64,33 @@ export default function StudentDashboard() {
   })
 
   const statCards = [
-    { Icon: IconSubjects,  label: 'Subjects',   value: subjectCount, href: '/student/subjects', iconColor: '#63b3ed', color: 'text-[#63b3ed] border-[rgba(99,179,237,0.3)] bg-[rgba(99,179,237,0.06)]' },
-    { Icon: IconSubmitted, label: 'Submitted',   value: submitted,    href: '/student/projects', iconColor: '#1a7a6e', color: 'text-[#1a7a6e] border-[rgba(26,122,110,0.3)] bg-[rgba(26,122,110,0.06)]' },
-    { Icon: IconApproved,  label: 'Graded',      value: graded,       href: '/student/projects', iconColor: '#d4a843', color: 'text-[#d4a843] border-[rgba(212,168,67,0.3)] bg-[rgba(212,168,67,0.08)]' },
-    { Icon: IconDraft,     label: 'Drafts',      value: drafts,       href: '/student/projects', iconColor: '#8b5a2b', color: 'text-[#8b5a2b] border-[rgba(139,90,43,0.3)] bg-[rgba(139,90,43,0.06)]' },
+    { Icon: IconSubjects,  label: 'Subjects', value: subjectCount, href: '/student/subjects', iconColor: '#63b3ed', color: 'text-[#63b3ed] border-[rgba(99,179,237,0.3)] bg-[rgba(99,179,237,0.06)]'   },
+    { Icon: IconSubmitted, label: 'Submitted', value: submitted,   href: '/student/projects', iconColor: '#1a7a6e', color: 'text-[#1a7a6e] border-[rgba(26,122,110,0.3)] bg-[rgba(26,122,110,0.06)]'  },
+    { Icon: IconApproved,  label: 'Graded',    value: graded,      href: '/student/projects', iconColor: '#d4a843', color: 'text-[#d4a843] border-[rgba(212,168,67,0.3)] bg-[rgba(212,168,67,0.08)]'   },
+    { Icon: IconDraft,     label: 'Drafts',    value: drafts,      href: '/student/projects', iconColor: '#8b5a2b', color: 'text-[#8b5a2b] border-[rgba(139,90,43,0.3)] bg-[rgba(139,90,43,0.06)]'     },
   ]
 
   return (
     <div>
-      {/* Header */}
+      {/* ── Header: avatar + greeting ───────────────────────────────── */}
       <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          
-          <h1 className="text-3xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
-            Welcome back, {session?.user?.name?.split(' ')[0]} 👋
-          </h1>
-          <p className="text-[#7a6a52] text-sm mt-1">Here's your learning activity at a glance.</p>
+        <div className="flex items-center gap-4">
+          {/* ← Clickable avatar links to profile */}
+          <Link href="/student/profile" title="Edit profile">
+            <Avatar
+              src={avatarUrl}
+              name={session?.user?.name}
+              role="student"
+              size={52}
+              className="hover:scale-105 transition-transform"
+            />
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
+              Welcome back, {session?.user?.name?.split(' ')[0]} 👋
+            </h1>
+            <p className="text-[#7a6a52] text-sm mt-1">Here's your learning activity at a glance.</p>
+          </div>
         </div>
         <div className="hidden lg:flex flex-col items-end gap-3">
           <RealTimeClock accentColor="#63b3ed" />
@@ -168,7 +176,6 @@ export default function StudentDashboard() {
                     {s.status === 'graded' && s.grade !== undefined && (
                       <span className="text-sm font-bold text-[#1a1209]">{s.grade}pts</span>
                     )}
-                    {/* Status badge with SVG icon */}
                     <span className={`flex items-center gap-1.5 text-xs font-mono px-2 py-0.5 border rounded-sm ${st.color}`}>
                       <st.Icon size={12} color={st.iconColor} />
                       {st.label}

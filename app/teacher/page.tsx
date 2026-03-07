@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import RealTimeClock from '@/components/RealTimeClock'
 import DashboardSearch from '@/components/DashboardSearch'
+import Avatar from '@/components/Avatar'
 import {
   IconSubjects, IconProjects, IconPending, IconApproved,
   IconRejected, IconAnnouncements, IconWarning,
@@ -42,9 +43,11 @@ function StatCard({
 
 export default function TeacherDashboard() {
   const { data: session } = useSession()
-  const [stats, setStats] = useState<Stats>({ subjects: 0, projects: 0, pending: 0, approved: 0, rejected: 0, announcements: 0 })
+  const [stats,         setStats]         = useState<Stats>({ subjects: 0, projects: 0, pending: 0, approved: 0, rejected: 0, announcements: 0 })
   const [notifications, setNotifications] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading,       setLoading]       = useState(true)
+
+  const avatarUrl = (session?.user as any)?.avatarUrl ?? null
 
   useEffect(() => {
     async function load() {
@@ -78,30 +81,43 @@ export default function TeacherDashboard() {
   }, [])
 
   const statCards = [
-    { Icon: IconSubjects,      label: 'My Subjects',      value: stats.subjects,      href: '/teacher/subjects',      iconColor: '#1a7a6e', color: 'text-[#1a7a6e] border-[rgba(26,122,110,0.3)] bg-[rgba(26,122,110,0.06)]' },
-    { Icon: IconProjects,      label: 'Total Projects',   value: stats.projects,      href: '/teacher/projects',      iconColor: '#8b5a2b', color: 'text-[#8b5a2b] border-[rgba(139,90,43,0.3)] bg-[rgba(139,90,43,0.06)]' },
-    { Icon: IconPending,       label: 'Pending Approval', value: stats.pending,       href: '/teacher/projects',      iconColor: '#d4a843', color: 'text-[#d4a843] border-[rgba(212,168,67,0.3)] bg-[rgba(212,168,67,0.08)]' },
-    { Icon: IconApproved,      label: 'Approved',         value: stats.approved,      href: '/teacher/projects',      iconColor: '#1a7a6e', color: 'text-[#1a7a6e] border-[rgba(26,122,110,0.3)] bg-[rgba(26,122,110,0.06)]' },
-    { Icon: IconRejected,      label: 'Rejected',         value: stats.rejected,      href: '/teacher/projects',      iconColor: '#c0392b', color: 'text-[#c0392b] border-[rgba(192,57,43,0.3)] bg-[rgba(192,57,43,0.06)]' },
-    { Icon: IconAnnouncements, label: 'Announcements',    value: stats.announcements, href: '/teacher/announcements', iconColor: '#8b5a2b', color: 'text-[#8b5a2b] border-[rgba(139,90,43,0.3)] bg-[rgba(139,90,43,0.06)]' },
+    { Icon: IconSubjects,      label: 'My Subjects',      value: stats.subjects,      href: '/teacher/subjects',      iconColor: '#1a7a6e', color: 'text-[#1a7a6e] border-[rgba(26,122,110,0.3)] bg-[rgba(26,122,110,0.06)]'   },
+    { Icon: IconProjects,      label: 'Total Projects',   value: stats.projects,      href: '/teacher/projects',      iconColor: '#8b5a2b', color: 'text-[#8b5a2b] border-[rgba(139,90,43,0.3)] bg-[rgba(139,90,43,0.06)]'     },
+    { Icon: IconPending,       label: 'Pending Approval', value: stats.pending,       href: '/teacher/projects',      iconColor: '#d4a843', color: 'text-[#d4a843] border-[rgba(212,168,67,0.3)] bg-[rgba(212,168,67,0.08)]'   },
+    { Icon: IconApproved,      label: 'Approved',         value: stats.approved,      href: '/teacher/projects',      iconColor: '#1a7a6e', color: 'text-[#1a7a6e] border-[rgba(26,122,110,0.3)] bg-[rgba(26,122,110,0.06)]'   },
+    { Icon: IconRejected,      label: 'Rejected',         value: stats.rejected,      href: '/teacher/projects',      iconColor: '#c0392b', color: 'text-[#c0392b] border-[rgba(192,57,43,0.3)] bg-[rgba(192,57,43,0.06)]'     },
+    { Icon: IconAnnouncements, label: 'Announcements',    value: stats.announcements, href: '/teacher/announcements', iconColor: '#8b5a2b', color: 'text-[#8b5a2b] border-[rgba(139,90,43,0.3)] bg-[rgba(139,90,43,0.06)]'     },
   ]
 
   const quickActions = [
-    { href: '/teacher/projects',      Icon: IconAdd,          label: 'New Project' },
-    { href: '/teacher/subjects',      Icon: IconOpenBook,     label: 'Add Material' },
-    { href: '/teacher/announcements', Icon: IconAnnouncements,label: 'Announce' },
-    { href: '/teacher/students',      Icon: IconProgress,     label: 'View Progress' },
+    { href: '/teacher/projects',      Icon: IconAdd,           label: 'New Project'   },
+    { href: '/teacher/subjects',      Icon: IconOpenBook,      label: 'Add Material'  },
+    { href: '/teacher/announcements', Icon: IconAnnouncements, label: 'Announce'      },
+    { href: '/teacher/students',      Icon: IconProgress,      label: 'View Progress' },
   ]
 
   return (
     <div>
+      {/* ── Header: avatar + greeting ───────────────────────────────── */}
       <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="text-[#1a7a6e] text-xs font-mono tracking-[0.2em] uppercase mb-1">先生ダッシュボード</p>
-          <h1 className="text-3xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
-            Welcome, {session?.user?.name?.split(' ')[0]} 👋
-          </h1>
-          <p className="text-[#7a6a52] text-sm mt-1">Here's an overview of your teaching activity.</p>
+        <div className="flex items-center gap-4">
+          {/* Clickable avatar links to profile */}
+          <Link href="/teacher/profile" title="Edit profile">
+            <Avatar
+              src={avatarUrl}
+              name={session?.user?.name}
+              role="teacher"
+              size={52}
+              className="hover:scale-105 transition-transform"
+            />
+          </Link>
+          <div>
+            <p className="text-[#1a7a6e] text-xs font-mono tracking-[0.2em] uppercase mb-1">先生ダッシュボード</p>
+            <h1 className="text-3xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
+              Welcome, {session?.user?.name?.split(' ')[0]} 👋
+            </h1>
+            <p className="text-[#7a6a52] text-sm mt-1">Here's an overview of your teaching activity.</p>
+          </div>
         </div>
         <div className="hidden lg:flex flex-col items-end gap-3">
           <RealTimeClock accentColor="#1a7a6e" />

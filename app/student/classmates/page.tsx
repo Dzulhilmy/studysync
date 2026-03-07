@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import RealTimeClock from '@/components/RealTimeClock';
+import RealTimeClock from '@/components/RealTimeClock'
+import Avatar from '@/components/Avatar'
 
 interface ClassmateProgress {
   _id: string; name: string; isMe: boolean
   submitted: number; totalProjects: number; progressPct: number
+  avatarUrl?: string | null
 }
 interface SubjectGroup {
   subject: { _id: string; name: string; code: string; teacher: string }
@@ -22,15 +24,9 @@ function ProgressBar({ pct, isMe }: { pct: number; isMe: boolean }) {
   return (
     <div className="flex items-center gap-3 w-full">
       <div className="flex-1 bg-[#f0e9d6] rounded-full h-2.5 overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, background: color }}
-        />
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span
-        className="text-xs font-mono font-bold w-8 text-right shrink-0"
-        style={{ color }}
-      >
+      <span className="text-xs font-mono font-bold w-8 text-right shrink-0" style={{ color }}>
         {pct}%
       </span>
     </div>
@@ -38,10 +34,10 @@ function ProgressBar({ pct, isMe }: { pct: number; isMe: boolean }) {
 }
 
 export default function ClassmatesPage() {
-  const [data, setData] = useState<SubjectGroup[]>([])
-  const [loading, setLoading] = useState(true)
+  const [data,            setData]            = useState<SubjectGroup[]>([])
+  const [loading,         setLoading]         = useState(true)
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null)
-  const [search, setSearch] = useState('')
+  const [search,          setSearch]          = useState('')
 
   useEffect(() => {
     fetch('/api/student/classmates')
@@ -55,7 +51,7 @@ export default function ClassmatesPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const current = data.find((g) => g.subject._id === selectedSubject)
+  const current  = data.find((g) => g.subject._id === selectedSubject)
   const filtered = (current?.classmates ?? []).filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase())
   )
@@ -66,13 +62,11 @@ export default function ClassmatesPage() {
         href="/student"
         className="inline-flex items-center gap-2 text-xs font-mono text-[#7a6a52] hover:text-[#63b3ed] mb-6 group transition-colors"
       >
-        <span className="text-base leading-none group-hover:-translate-x-1 transition-transform">
-          ←
-        </span>
+        <span className="text-base leading-none group-hover:-translate-x-1 transition-transform">←</span>
         Back to Dashboard
       </Link>
+
       <div className="mb-6">
-        
         <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
           Classmates
         </h1>
@@ -140,10 +134,10 @@ export default function ClassmatesPage() {
               {/* Legend */}
               <div className="flex gap-4 mb-3 flex-wrap">
                 {[
-                  { color: '#63b3ed', label: 'You' },
-                  { color: '#1a7a6e', label: '100% done' },
-                  { color: '#d4a843', label: '50–99%' },
-                  { color: '#c0392b', label: 'Below 50%' },
+                  { color: '#63b3ed', label: 'You'        },
+                  { color: '#1a7a6e', label: '100% done'  },
+                  { color: '#d4a843', label: '50–99%'     },
+                  { color: '#c0392b', label: 'Below 50%'  },
                 ].map((l) => (
                   <div key={l.label} className="flex items-center gap-1.5">
                     <div className="w-3 h-3 rounded-full" style={{ background: l.color }} />
@@ -172,25 +166,25 @@ export default function ClassmatesPage() {
                           {classmate.isMe ? '★' : `#${i + 1}`}
                         </div>
 
-                        {/* Avatar */}
-                        <div
-                          className={`w-8 h-8 rounded-sm flex items-center justify-center text-sm font-bold shrink-0 ${
-                            classmate.isMe
-                              ? 'bg-[#1a2535] border border-[rgba(99,179,237,0.4)] text-[#63b3ed]'
-                              : 'bg-[#f0e9d6] border border-[#c8b89a] text-[#8b5a2b]'
-                          }`}
-                        >
-                          {classmate.name[0]}
+                        {/* ── Avatar replaces the letter box ── */}
+                        <div className="shrink-0">
+                          <Avatar
+                            src={classmate.avatarUrl}
+                            name={classmate.name}
+                            role="student"
+                            size={32}
+                            // "You" row gets a blue ring, others use default
+                            className={classmate.isMe ? 'ring-2 ring-[rgba(99,179,237,0.5)]' : ''}
+                          />
                         </div>
 
                         {/* Name */}
                         <div className="w-40 shrink-0">
-                          <div
-                            className={`text-sm font-semibold truncate ${
-                              classmate.isMe ? 'text-[#63b3ed]' : 'text-[#1a1209]'
-                            }`}
-                          >
+                          <div className={`text-sm font-semibold truncate ${classmate.isMe ? 'text-[#63b3ed]' : 'text-[#1a1209]'}`}>
                             {classmate.name}
+                            {classmate.isMe && (
+                              <span className="ml-1.5 text-[10px] font-mono text-[rgba(99,179,237,0.6)]">(you)</span>
+                            )}
                           </div>
                           <div className="text-xs text-[#7a6a52] font-mono">
                             {classmate.submitted}/{classmate.totalProjects} submitted
