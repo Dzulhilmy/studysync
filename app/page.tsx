@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import LandingSearch from "../components/LandingSearch";
+import { ArrowRight } from "lucide-react";
 
 /* ═══════════════════════════════════════════
    SVG ICON LIBRARY
@@ -983,6 +984,13 @@ export default function Home() {
         .a4{animation:up .9s .72s cubic-bezier(.22,1,.36,1) both}
         .a5{animation:up 1.1s 1.0s cubic-bezier(.22,1,.36,1) both}
 
+        .stack-outer { display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center; }
+        .stack-cards { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; }
+        @media (max-width: 820px) {
+        .stack-outer { grid-template-columns: 1fr; gap: 3rem; }
+        .stack-cards { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+        }
+
         .ink-path{
           stroke-dasharray:700;
           stroke-dashoffset:700;
@@ -998,6 +1006,22 @@ export default function Home() {
           stroke-dashoffset:700;
           animation:ink 2s 1.8s ease forwards;
         }
+
+        .footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        }
+        @media (max-width: 640px) {
+        .footer {
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        }
+      }
 
         .stamp-el{animation:stamp .6s 2s cubic-bezier(.3,.7,.4,1.5) both}
 
@@ -2336,6 +2360,43 @@ export default function Home() {
         </div>
       </section>
 
+      {/*
+  ─────────────────────────────────────────────────────────────
+  STEP 1 — Add these rules inside the existing <style>{`…`}</style>
+  (paste anywhere before the closing backtick)
+  ─────────────────────────────────────────────────────────────
+
+  .stack-outer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5rem;
+    align-items: center;
+  }
+  .stack-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .85rem;
+  }
+  @media (max-width: 820px) {
+    .stack-outer {
+      grid-template-columns: 1fr;
+      gap: 3rem;
+    }
+    .stack-cards {
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+  }
+  @media (max-width: 480px) {
+    .stack-cards {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  ─────────────────────────────────────────────────────────────
+  STEP 2 — Replace the entire ─── STACK ─── <section> with this:
+  ─────────────────────────────────────────────────────────────
+*/}
+
       {/* ─── STACK ────────────────────────────────────── */}
       <section
         id="stack"
@@ -2359,23 +2420,17 @@ export default function Home() {
             zIndex: 1,
           }}
         >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "5rem",
-              alignItems: "center",
-            }}
-          >
+          {/* ── Outer: text left / cards right — collapses to 1 col on mobile ── */}
+          <div className="stack-outer">
+
+            {/* ── Left: headline + CTA ── */}
             <Rise>
-              
               <h2
                 style={{
                   fontFamily: "Noto Serif JP,serif",
                   fontWeight: 900,
                   fontSize: "clamp(1.8rem,4vw,2.8rem)",
                   color: "#1a1209",
-                  marginTop: ".55rem",
                   marginBottom: "1.2rem",
                   lineHeight: 1.2,
                 }}
@@ -2391,6 +2446,7 @@ export default function Home() {
                   lineHeight: 1.9,
                   marginBottom: "2rem",
                   fontWeight: 300,
+                  maxWidth: 420,
                 }}
               >
                 StudySync runs on a production-grade modern stack. No
@@ -2419,27 +2475,20 @@ export default function Home() {
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "translate(-3px,-3px)";
-                  e.currentTarget.style.boxShadow =
-                    "7px 7px 0 rgba(26,18,9,.2)";
+                  e.currentTarget.style.boxShadow = "7px 7px 0 rgba(26,18,9,.2)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "";
-                  e.currentTarget.style.boxShadow =
-                    "4px 4px 0 rgba(26,18,9,.16)";
+                  e.currentTarget.style.boxShadow = "4px 4px 0 rgba(26,18,9,.16)";
                 }}
               >
                 <IconGraduate size={16} /> Access Dashboard
               </Link>
             </Rise>
 
+            {/* ── Right: 2×3 tech cards ── */}
             <Rise d={0.18}>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: ".85rem",
-                }}
-              >
+              <div className="stack-cards">
                 {STACK.map((t) => (
                   <div
                     key={t.n}
@@ -2449,7 +2498,7 @@ export default function Home() {
                       borderRadius: 2,
                       padding: "1rem 1.1rem",
                       boxShadow: "2px 2px 0 #c8b89a",
-                      transition: "transform .2s,box-shadow .2s",
+                      transition: "transform .2s, box-shadow .2s",
                     }}
                     onMouseEnter={(e) => {
                       const el = e.currentTarget as HTMLDivElement;
@@ -2462,7 +2511,7 @@ export default function Home() {
                       el.style.boxShadow = "2px 2px 0 #c8b89a";
                     }}
                   >
-                    <div style={{ fontSize: "1.2rem", marginBottom: ".35rem" }}>
+                    <div style={{ marginBottom: ".35rem" }}>
                       <t.Icon size={26} />
                     </div>
                     <div
@@ -2489,6 +2538,7 @@ export default function Home() {
                 ))}
               </div>
             </Rise>
+
           </div>
         </div>
       </section>
@@ -2611,18 +2661,34 @@ export default function Home() {
       </section>
 
       {/* ─── FOOTER ───────────────────────────────────── */}
+      {/*
+        ── Add these 2 rules inside your existing <style>{`…`}</style> ──
+
+        .footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 1rem;
+        }
+        @media (max-width: 640px) {
+          .footer {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+          }
+        }
+      */}
       <footer
+        className="footer"
         style={{
           background: "#080503",
           borderTop: "1px solid rgba(212,168,67,.09)",
           padding: "1.8rem clamp(1.5rem,5vw,3.5rem)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "1rem",
         }}
       >
+        {/* Logo */}
         <div
           style={{
             fontFamily: "Noto Serif JP,serif",
@@ -2631,23 +2697,32 @@ export default function Home() {
             color: "#faf6ee",
           }}
         >
-          Study<span style={{
-                  fontFamily: "Noto Serif JP,serif",
-                  color: "transparent",
-                  WebkitTextStroke: "2px #d4a843",
-                  textShadow: "0 0 100px rgba(212,168,67,.12)",
-                  }}>Sync</span>
+          Study
+          <span
+            style={{
+              fontFamily: "Noto Serif JP,serif",
+              color: "transparent",
+              WebkitTextStroke: "2px #d4a843",
+              textShadow: "0 0 100px rgba(212,168,67,.12)",
+            }}
+          >
+            Sync
+          </span>
         </div>
+
+        {/* Copyright */}
         <div
           style={{
             fontFamily: "Share Tech Mono",
             fontSize: ".65rem",
-            color: "rgba(250, 246, 238, 0.57)",
+            color: "rgba(250,246,238,0.57)",
             letterSpacing: ".2em",
           }}
         >
           © 2026 STUDYSYNC · SECONDARY SCHOOL LMS
         </div>
+
+        {/* Sign in */}
         <Link
           href="/login"
           style={{
@@ -2658,15 +2733,14 @@ export default function Home() {
             textDecoration: "none",
             textTransform: "uppercase",
             transition: "color .2s",
+            alignItems: "center",
+            display: "inline-flex",
+            gap: 6,
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = "#d4a843";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = "rgba(212,168,67,.38)";
-          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = "#d4a843" }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(212,168,67,.38)" }}
         >
-          Sign In →
+          Sign In <ArrowRight size={14} />
         </Link>
       </footer>
     </>
