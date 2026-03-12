@@ -60,7 +60,8 @@ interface SubmissionRow {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const REDO_THRESHOLD = 0.85  // 85% of maxScore
+const REDO_THRESHOLD    = 0.85   // 85% of maxScore
+const PROJECTS_PER_PAGE = 10     // [NEW] pagination
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -94,6 +95,208 @@ function ProgressBar({ pct, color }: { pct: number; color: string }) {
   return (
     <div className="w-full bg-[#f0e9d6] rounded-full h-2 overflow-hidden">
       <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
+    </div>
+  )
+}
+
+// ── [NEW] Per-project mini progress ──────────────────────────────────────────
+
+function ProjectMiniProgress({
+  submission,
+  maxScore,
+}: {
+  submission: SubmissionRow['submission']
+  maxScore:   number
+}) {
+  if (!submission) return null
+
+  const versCount   = submission.versions?.length ?? 0
+  const latestGrade = submission.grade
+  const passed      = latestGrade !== null && latestGrade / maxScore >= REDO_THRESHOLD
+  const pct         = passed ? 100 : latestGrade !== null ? Math.round((latestGrade / maxScore) * 100) : versCount > 0 ? 40 : 10
+
+  const statusLabel = passed
+    ? `✓ Passed — ${latestGrade}/${maxScore}`
+    : latestGrade !== null
+      ? `Not yet passing — ${latestGrade}/${maxScore}`
+      : versCount > 0
+        ? `${versCount} version${versCount > 1 ? 's' : ''} submitted, awaiting grade`
+        : 'Submitted — awaiting grade'
+
+  const barColor = passed ? '#1a7a6e' : latestGrade !== null ? '#c0392b' : '#d4a843'
+
+  return (
+    <div className="mt-2.5 pt-2.5 border-t border-[#f0e9d6]">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] font-mono text-[#7a6a52] uppercase tracking-wider">Project Progress</span>
+        <span className="text-[10px] font-mono font-semibold" style={{ color: barColor }}>{statusLabel}</span>
+      </div>
+      <ProgressBar pct={pct} color={barColor} />
+    </div>
+  )
+}
+
+// ── [NEW] Version grades popup (for >3 versions) ─────────────────────────────
+
+function VersionGradesPopup({
+  versions,
+  maxScore,
+  currentVersion,
+  onClose,
+}: {
+  versions:       SubmissionVersion[]
+  maxScore:       number
+  currentVersion: number
+  onClose:        () => void
+}) {
+  const sorted = [...versions].sort((a, b) => b.version - a.version)
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-white border border-[#c8b89a] rounded-sm shadow-[6px_6px_0_#c8b89a] w-full max-w-sm max-h-[70vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="bg-[#1a3a2a] px-4 py-3 flex items-center justify-between shrink-0">
+          <span className="text-[#d4a843] text-xs font-mono uppercase tracking-wider">
+            All Versions — Grades
+          </span>
+          <button onClick={onClose} className="text-[rgba(250,246,238,0.4)] hover:text-white transition-colors">
+            <IconClose size={13} color="currentColor" />
+          </button>
+        </div>
+        <div className="overflow-y-auto p-3 space-y-2">
+          {sorted.map(v => {
+            const passed    = v.grade !== null && v.grade / maxScore >= REDO_THRESHOLD
+            const isCurrent = v.version === currentVersion
+            return (
+              <div key={v.version}
+                className={`flex items-center justify-between px-3 py-2 rounded-sm border ${
+                  isCurrent ? 'border-[#1a7a6e] bg-[rgba(26,122,110,0.04)]' : 'border-[#e8dfc8] bg-[#fdfcf8]'
+                }`}>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                    isCurrent
+                      ? 'text-[#1a7a6e] bg-[rgba(26,122,110,0.1)] border-[rgba(26,122,110,0.3)]'
+                      : 'text-[#7a6a52] bg-[#f0e9d6] border-[#c8b89a]'
+                  }`}>V{v.version}</span>
+                  {isCurrent && <span className="text-[9px] font-mono text-[#1a7a6e]">Latest</span>}
+                  {v.isLate   && <span className="text-[9px] font-mono text-[#c0392b]">Late</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-[#7a6a52]">{fmt(v.submittedAt)}</span>
+                  {v.grade !== null ? (
+                    <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                      passed
+                        ? 'text-[#1a7a6e] bg-[rgba(26,122,110,0.08)] border-[rgba(26,122,110,0.25)]'
+                        : 'text-[#c0392b] bg-[rgba(192,57,43,0.06)] border-[rgba(192,57,43,0.25)]'
+                    }`}>
+                      {v.grade}/{maxScore} {passed ? '✓' : '✗'}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-mono text-[#c8b89a] italic">No grade yet</span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── [NEW] Version chips: inline grades (≤3) or popup trigger (>3) ─────────────
+
+function VersionChips({
+  submission,
+  maxScore,
+  onOpenVersionsModal,
+}: {
+  submission:          SubmissionRow['submission']
+  maxScore:            number
+  onOpenVersionsModal: () => void
+}) {
+  const [showPopup, setShowPopup] = useState(false)
+  if (!submission) return null
+  const versions  = submission.versions ?? []
+  const versCount = versions.length
+  if (versCount === 0) return null
+
+  const sorted = [...versions].sort((a, b) => a.version - b.version)
+
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap mt-2">
+      {versCount <= 3 ? (
+        // Show each chip with grade inline
+        sorted.map(v => {
+          const passed    = v.grade !== null && v.grade / maxScore >= REDO_THRESHOLD
+          const hasGrade  = v.grade !== null
+          const isCurrent = v.version === submission.currentVersion
+          return (
+            <span
+              key={v.version}
+              onClick={onOpenVersionsModal}
+              title={`V${v.version} — ${fmt(v.submittedAt)}${hasGrade ? ` · ${v.grade}/${maxScore}` : ''}`}
+              className={`cursor-pointer text-[10px] font-mono font-bold px-2 py-0.5 border rounded transition-colors flex items-center gap-1 ${
+                isCurrent
+                  ? 'text-[#1a7a6e] bg-[rgba(26,122,110,0.1)] border-[rgba(26,122,110,0.3)] hover:bg-[rgba(26,122,110,0.18)]'
+                  : 'text-[#7a6a52] bg-[#f0e9d6] border-[#c8b89a] hover:bg-[#e8dfc8]'
+              }`}
+            >
+              V{v.version}
+              {hasGrade && (
+                <span className={`ml-0.5 font-normal ${passed ? 'text-[#1a7a6e]' : 'text-[#c0392b]'}`}>
+                  · {v.grade}/{maxScore} {passed ? '✓' : '✗'}
+                </span>
+              )}
+            </span>
+          )
+        })
+      ) : (
+        // >3 versions: show first 2 + a popup trigger for the rest
+        <>
+          {showPopup && (
+            <VersionGradesPopup
+              versions={versions}
+              maxScore={maxScore}
+              currentVersion={submission.currentVersion}
+              onClose={() => setShowPopup(false)}
+            />
+          )}
+          {sorted.slice(0, 2).map(v => {
+            const passed    = v.grade !== null && v.grade / maxScore >= REDO_THRESHOLD
+            const hasGrade  = v.grade !== null
+            const isCurrent = v.version === submission.currentVersion
+            return (
+              <span key={v.version} onClick={onOpenVersionsModal}
+                className={`cursor-pointer text-[10px] font-mono font-bold px-2 py-0.5 border rounded transition-colors flex items-center gap-1 ${
+                  isCurrent
+                    ? 'text-[#1a7a6e] bg-[rgba(26,122,110,0.1)] border-[rgba(26,122,110,0.3)]'
+                    : 'text-[#7a6a52] bg-[#f0e9d6] border-[#c8b89a]'
+                }`}>
+                V{v.version}
+                {hasGrade && (
+                  <span className={`ml-0.5 font-normal ${passed ? 'text-[#1a7a6e]' : 'text-[#c0392b]'}`}>
+                    · {v.grade}/{maxScore} {passed ? '✓' : '✗'}
+                  </span>
+                )}
+              </span>
+            )
+          })}
+          <button
+            onClick={() => setShowPopup(true)}
+            title="View all versions and grades"
+            className="text-[10px] font-mono font-bold px-2 py-0.5 border rounded transition-colors flex items-center gap-1 text-[#d4a843] bg-[rgba(212,168,67,0.08)] border-[rgba(212,168,67,0.35)] hover:bg-[rgba(212,168,67,0.18)]"
+          >
+            +{versCount - 2} more ▾
+          </button>
+        </>
+      )}
+
+      <button onClick={onOpenVersionsModal}
+        className="text-[10px] font-mono text-[#7a6a52] hover:text-[#1a7a6e] underline transition-colors ml-0.5">
+        See all versions
+      </button>
     </div>
   )
 }
@@ -305,12 +508,12 @@ function GradingPanel({
   }>>({})
   const [openMsgSet,     setOpenMsgSet]     = useState<Set<string>>(new Set())
   const [versionFor,     setVersionFor]     = useState<SubmissionRow | null>(null)
-  // Redo modal state
-  const [redoFor,        setRedoFor]        = useState<string | null>(null)  // submissionId
+  const [redoFor,        setRedoFor]        = useState<string | null>(null)
   const [redoReason,     setRedoReason]     = useState('')
   const [sendingRedo,    setSendingRedo]    = useState(false)
-  // Below-threshold prompt
   const [belowThreshold, setBelowThreshold] = useState<Set<string>>(new Set())
+  // [NEW] Pagination state
+  const [currentPage,    setCurrentPage]    = useState(1)
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -349,7 +552,6 @@ function GradingPanel({
   }, [onClose, versionFor, redoFor])
 
   function setField(subId: string, field: 'grade' | 'feedback', value: string) {
-    // Clear below-threshold prompt when user changes grade
     if (field === 'grade') {
       setBelowThreshold(prev => { const n = new Set(prev); n.delete(subId); return n })
     }
@@ -378,7 +580,6 @@ function GradingPanel({
           ? { ...r, submission: { ...r.submission!, grade: gradeNum, feedback: inp.feedback, status: 'graded' } }
           : r
       ))
-      // Check if below threshold → show redo prompt
       if (gradeNum / maxScore < REDO_THRESHOLD) {
         setBelowThreshold(prev => new Set([...prev, subId]))
       }
@@ -417,15 +618,20 @@ function GradingPanel({
     })
   }
 
-  const submitted    = rows.filter(r => r.submission && r.submission.status !== 'pending')
-  const notSubmitted = rows.filter(r => !r.submission || r.submission.status === 'pending')
+  // [NEW] Paginate all rows
+  const totalPages = Math.max(1, Math.ceil(rows.length / PROJECTS_PER_PAGE))
+  const pagedRows  = rows.slice(
+    (currentPage - 1) * PROJECTS_PER_PAGE,
+    currentPage * PROJECTS_PER_PAGE
+  )
+  const submitted    = pagedRows.filter(r => r.submission && r.submission.status !== 'pending' && r.submission.status !== 'draft')
+  const notSubmitted = pagedRows.filter(r => !r.submission || r.submission.status === 'pending' || r.submission.status === 'draft')
 
   return (
     <>
       <style>{`@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
       <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40" />
 
-      {/* Versions modal (z-60 so it's above the panel) */}
       {versionFor && (
         <VersionsModal
           projectTitle={versionFor.project.title}
@@ -435,7 +641,6 @@ function GradingPanel({
         />
       )}
 
-      {/* Redo reason modal */}
       {redoFor && (
         <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
           <div className="bg-white border border-[#c8b89a] rounded-sm shadow-[5px_5px_0_#c8b89a] w-full max-w-sm"
@@ -545,6 +750,16 @@ function GradingPanel({
             </div>
           ) : (
             <>
+              {/* [NEW] Page info */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-mono text-[#7a6a52]">
+                    Showing {(currentPage - 1) * PROJECTS_PER_PAGE + 1}–{Math.min(currentPage * PROJECTS_PER_PAGE, rows.length)} of {rows.length} projects
+                  </span>
+                  <span className="text-[11px] font-mono text-[#7a6a52]">Page {currentPage}/{totalPages}</span>
+                </div>
+              )}
+
               {submitted.length > 0 && (
                 <section>
                   <p className="text-[10px] font-mono uppercase tracking-widest text-[#7a6a52] mb-2.5">
@@ -552,11 +767,10 @@ function GradingPanel({
                   </p>
                   <div className="space-y-4">
                     {submitted.map(row => {
-                      const sub       = row.submission!
-                      const inp       = inputs[sub._id] ?? { grade: '', feedback: '', saving: false, saved: false, error: '' }
-                      const dl        = daysLeft(row.project.deadline)
+                      const sub        = row.submission!
+                      const inp        = inputs[sub._id] ?? { grade: '', feedback: '', saving: false, saved: false, error: '' }
+                      const dl         = daysLeft(row.project.deadline)
                       const needsGrade = sub.status !== 'graded'
-                      const versCount  = sub.versions?.length ?? 0
                       const msgCount   = sub.messages?.length ?? 0
                       const isBelow    = belowThreshold.has(sub._id)
                       const isMsgOpen  = openMsgSet.has(sub._id)
@@ -619,27 +833,18 @@ function GradingPanel({
                               )}
                             </div>
 
-                            {/* Version chips */}
-                            {versCount > 0 && (
-                              <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                                {sub.versions.map(v => (
-                                  <span key={v.version}
-                                    onClick={() => setVersionFor(row)}
-                                    title={`V${v.version} — ${fmt(v.submittedAt)}`}
-                                    className={`cursor-pointer text-[10px] font-mono font-bold px-2 py-0.5 border rounded transition-colors ${
-                                      v.version === sub.currentVersion
-                                        ? 'text-[#1a7a6e] bg-[rgba(26,122,110,0.1)] border-[rgba(26,122,110,0.3)] hover:bg-[rgba(26,122,110,0.18)]'
-                                        : 'text-[#7a6a52] bg-[#f0e9d6] border-[#c8b89a] hover:bg-[#e8dfc8]'
-                                    }`}>
-                                    V{v.version}
-                                  </span>
-                                ))}
-                                <button onClick={() => setVersionFor(row)}
-                                  className="text-[10px] font-mono text-[#7a6a52] hover:text-[#1a7a6e] underline transition-colors ml-0.5">
-                                  See all versions
-                                </button>
-                              </div>
-                            )}
+                            {/* [NEW] Version chips with per-version grades */}
+                            <VersionChips
+                              submission={sub}
+                              maxScore={row.project.maxScore}
+                              onOpenVersionsModal={() => setVersionFor(row)}
+                            />
+
+                            {/* [NEW] Per-project mini progress bar */}
+                            <ProjectMiniProgress
+                              submission={sub}
+                              maxScore={row.project.maxScore}
+                            />
                           </div>
 
                           {/* ── Student response + file ── */}
@@ -705,7 +910,6 @@ function GradingPanel({
 
                             {inp.error && <p className="text-[11px] font-mono text-[#c0392b]">{inp.error}</p>}
 
-                            {/* Below-threshold redo prompt */}
                             {isBelow && !sub.redoRequested && (
                               <div className="p-3 bg-[rgba(192,57,43,0.05)] border border-[rgba(192,57,43,0.25)] rounded-sm flex items-center justify-between gap-3">
                                 <p className="text-xs text-[#c0392b]">
@@ -734,7 +938,6 @@ function GradingPanel({
                                     <IconApproved size={11} color="#1a7a6e" /> Saved
                                   </span>
                                 )}
-                                {/* Manual redo button (always available after grading) */}
                                 {sub.status === 'graded' && !sub.redoRequested && (
                                   <button
                                     onClick={() => setRedoFor(sub._id)}
@@ -771,7 +974,6 @@ function GradingPanel({
                               </button>
                             </div>
 
-                            {/* Messages toggle */}
                             <div className="flex items-center gap-2 pt-1 border-t border-[#f0e9d6]">
                               <button onClick={() => toggleMessages(sub._id)}
                                 className={`text-[11px] font-mono px-2.5 py-1 rounded-sm border transition-colors flex items-center gap-1.5 ${
@@ -788,7 +990,6 @@ function GradingPanel({
                               </button>
                             </div>
 
-                            {/* Messages panel */}
                             {isMsgOpen && (
                               <TeacherMessagesPanel
                                 submissionId={sub._id}
@@ -831,6 +1032,50 @@ function GradingPanel({
                     })}
                   </div>
                 </section>
+              )}
+
+              {/* [NEW] Pagination controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-3 border-t border-[#e8dfc8] mt-2 shrink-0">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-1.5 text-xs font-mono rounded-sm border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{ background: '#fff', color: '#4a3828', borderColor: '#c8b89a' }}
+                    onMouseEnter={e => { if (currentPage > 1) (e.currentTarget as HTMLElement).style.borderColor = '#1a7a6e' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#c8b89a' }}
+                  >
+                    ← Prev
+                  </button>
+
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className="w-7 h-7 text-[11px] font-mono rounded-sm border transition-all"
+                        style={{
+                          background:  page === currentPage ? '#1a3a2a' : '#fff',
+                          color:       page === currentPage ? '#d4a843' : '#7a6a52',
+                          borderColor: page === currentPage ? 'rgba(212,168,67,0.4)' : '#c8b89a',
+                        }}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-1.5 text-xs font-mono rounded-sm border transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{ background: '#fff', color: '#4a3828', borderColor: '#c8b89a' }}
+                    onMouseEnter={e => { if (currentPage < totalPages) (e.currentTarget as HTMLElement).style.borderColor = '#1a7a6e' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#c8b89a' }}
+                  >
+                    Next →
+                  </button>
+                </div>
               )}
             </>
           )}
