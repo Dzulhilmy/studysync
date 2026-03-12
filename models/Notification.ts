@@ -8,6 +8,8 @@ export type NotifType =
   | 'submission_graded'   // teacher graded → notify student
   | 'deadline_warning'    // 5 days left + not submitted → notify student
   | 'announcement_posted' // new announcement → notify relevant students
+  | 'redo_requested'      // teacher requested redo → notify student
+  | 'new_message'         // new message in submission thread → notify other party
 
 export interface INotification extends Document {
   recipient:  Schema.Types.ObjectId  // who receives this
