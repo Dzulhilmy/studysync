@@ -11,13 +11,16 @@ interface User {
   name:      string;
   email:     string;
   role:      string;
+  class?:    string | null;
   isActive:  boolean;
   avatarUrl?: string | null;
   lastLogin?: string;
   createdAt: string;
 }
 
-const EMPTY_FORM = { name: "", email: "", password: "", role: "student" };
+const CLASSES = ["5 Chempaka", "5 Tulip", "5 Kasturi"];
+
+const EMPTY_FORM = { name: "", email: "", password: "", role: "student", class: "" };
 
 const roleColor: Record<string, string> = {
   admin:   "text-[#c0392b] bg-[rgba(192,57,43,0.08)] border-[rgba(192,57,43,0.25)]",
@@ -25,17 +28,28 @@ const roleColor: Record<string, string> = {
   student: "text-[#1a7a6e] bg-[rgba(26,122,110,0.08)] border-[rgba(26,122,110,0.25)]",
 };
 
+const classColor: Record<string, string> = {
+  "5 Chempaka": "text-[#1a4a8a] bg-[rgba(26,74,138,0.08)] border-[rgba(26,74,138,0.25)]",
+  "5 Tulip":    "text-[#7a1a8a] bg-[rgba(122,26,138,0.08)] border-[rgba(122,26,138,0.25)]",
+  "5 Kasturi":  "text-[#8a4a1a] bg-[rgba(138,74,26,0.08)] border-[rgba(138,74,26,0.25)]",
+};
+
+// Special sentinel value so the "Unassigned" filter option is never confused
+// with "" or null — the actual DB values we test against are null / undefined / "".
+const FILTER_UNASSIGNED = "__none__";
+
 export default function UsersPage() {
-  const [users,       setUsers]       = useState<User[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [showForm,    setShowForm]    = useState(false);
-  const [form,        setForm]        = useState(EMPTY_FORM);
-  const [submitting,  setSubmitting]  = useState(false);
-  const [error,       setError]       = useState("");
-  const [search,      setSearch]      = useState("");
-  const [filterRole,  setFilterRole]  = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [popupUser,   setPopupUser]   = useState<User | null>(null); // ← avatar popup
+  const [users,        setUsers]        = useState<User[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [showForm,     setShowForm]     = useState(false);
+  const [form,         setForm]         = useState(EMPTY_FORM);
+  const [submitting,   setSubmitting]   = useState(false);
+  const [error,        setError]        = useState("");
+  const [search,       setSearch]       = useState("");
+  const [filterRole,   setFilterRole]   = useState("all");
+  const [filterClass,  setFilterClass]  = useState("all");
+  const [currentPage,  setCurrentPage]  = useState(1);
+  const [popupUser,    setPopupUser]    = useState<User | null>(null);
   const itemsPerPage = 10;
 
   async function loadUsers() {
@@ -46,12 +60,12 @@ export default function UsersPage() {
   }
 
   useEffect(() => { loadUsers(); }, []);
-  useEffect(() => { setCurrentPage(1); }, [search, filterRole]);
+  useEffect(() => { setCurrentPage(1); }, [search, filterRole, filterClass]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setSubmitting(true);
-    const res  = await fetch("/api/admin/users", {
+    const res = await fetch("/api/admin/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -82,12 +96,30 @@ export default function UsersPage() {
     const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) ||
                         u.email.toLowerCase().includes(search.toLowerCase());
     const matchRole   = filterRole === "all" || u.role === filterRole;
-    return matchSearch && matchRole;
+
+    // FIX: "unassigned" means class is null / undefined / empty string
+    const matchClass =
+      filterClass === "all"
+        ? true
+        : filterClass === FILTER_UNASSIGNED
+          ? !u.class
+          : u.class === filterClass;
+
+    return matchSearch && matchRole && matchClass;
   });
 
   const totalPages     = Math.ceil(filtered.length / itemsPerPage);
   const startIndex     = (currentPage - 1) * itemsPerPage;
   const paginatedUsers = filtered.slice(startIndex, startIndex + itemsPerPage);
+
+  function ClassBadge({ cls }: { cls?: string | null }) {
+    if (!cls) return <span className="text-xs font-mono text-[#b0a090]">—</span>;
+    return (
+      <span className={`text-[10px] font-mono px-2 py-0.5 border rounded-sm ${classColor[cls] ?? "text-[#4a3828] bg-[#f0e9d6] border-[#c8b89a]"}`}>
+        {cls}
+      </span>
+    );
+  }
 
   return (
     <div>
@@ -97,14 +129,13 @@ export default function UsersPage() {
         Back to Dashboard
       </Link>
 
-      {/* ── Avatar popup ──────────────────────────────────────────────── */}
+      {/* ── Avatar popup ─────────────────────────────────────────── */}
       {popupUser && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
           onClick={() => setPopupUser(null)}>
           <div className="bg-white border border-[#c8b89a] rounded-sm shadow-[6px_6px_0_#c8b89a] w-72 overflow-hidden"
             onClick={e => e.stopPropagation()}>
 
-            {/* Header */}
             <div className="bg-[#2c1810] px-5 py-4 flex items-center justify-between">
               <span className="text-[#d4a843] text-xs font-mono uppercase tracking-wider">User Profile</span>
               <button onClick={() => setPopupUser(null)}
@@ -113,26 +144,25 @@ export default function UsersPage() {
               </button>
             </div>
 
-            {/* Avatar + info */}
             <div className="p-6 flex flex-col items-center gap-3 border-b border-[#f0e9d6]">
-              <Avatar
-                src={popupUser.avatarUrl}
-                name={popupUser.name}
-                role={popupUser.role as any}
-                size={80}
-                showRoleDot
-              />
+              <Avatar src={popupUser.avatarUrl} name={popupUser.name} role={popupUser.role as any} size={80} showRoleDot />
               <div className="text-center">
                 <div className="font-serif font-bold text-[#1a1209] text-base">{popupUser.name}</div>
                 <div className="text-xs text-[#7a6a52] font-mono mt-0.5">{popupUser.email}</div>
-                <span className={`text-[10px] font-mono px-2 py-0.5 border rounded-sm capitalize inline-block mt-2 ${roleColor[popupUser.role]}`}>
-                  {popupUser.role}
-                </span>
+                <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
+                  <span className={`text-[10px] font-mono px-2 py-0.5 border rounded-sm capitalize ${roleColor[popupUser.role]}`}>
+                    {popupUser.role}
+                  </span>
+                  {popupUser.class && <ClassBadge cls={popupUser.class} />}
+                </div>
               </div>
             </div>
 
-            {/* Meta */}
             <div className="px-5 py-3 space-y-1.5 border-b border-[#f0e9d6]">
+              <div className="flex justify-between text-xs font-mono">
+                <span className="text-[#a89880]">Class</span>
+                <span className="text-[#4a3828]">{popupUser.class ?? "—"}</span>
+              </div>
               <div className="flex justify-between text-xs font-mono">
                 <span className="text-[#a89880]">Status</span>
                 <span className={popupUser.isActive ? "text-[#1a7a6e] font-bold" : "text-[#c0392b]"}>
@@ -155,18 +185,13 @@ export default function UsersPage() {
               )}
             </div>
 
-            {/* Actions */}
             <div className="p-4 flex gap-2">
-              <button
-                onClick={() => { toggleActive(popupUser); setPopupUser(null); }}
-                className="flex-1 text-xs py-2 border border-[#c8b89a] hover:bg-[#f0e9d6] rounded-sm text-[#7a6a52] transition-colors font-mono"
-              >
+              <button onClick={() => { toggleActive(popupUser); setPopupUser(null); }}
+                className="flex-1 text-xs py-2 border border-[#c8b89a] hover:bg-[#f0e9d6] rounded-sm text-[#7a6a52] transition-colors font-mono">
                 {popupUser.isActive ? "Deactivate" : "Activate"}
               </button>
-              <button
-                onClick={() => deleteUser(popupUser._id)}
-                className="flex-1 text-xs py-2 border border-[rgba(192,57,43,0.3)] hover:bg-[rgba(192,57,43,0.08)] rounded-sm text-[#c0392b] transition-colors font-mono"
-              >
+              <button onClick={() => deleteUser(popupUser._id)}
+                className="flex-1 text-xs py-2 border border-[rgba(192,57,43,0.3)] hover:bg-[rgba(192,57,43,0.08)] rounded-sm text-[#c0392b] transition-colors font-mono">
                 Delete
               </button>
             </div>
@@ -176,9 +201,7 @@ export default function UsersPage() {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1a1209] font-serif">User Management</h1>
-        </div>
+        <h1 className="text-2xl font-bold text-[#1a1209] font-serif">User Management</h1>
         <RealTimeClock accentColor="#d4a843" />
         <button onClick={() => { setShowForm(true); setError(""); }}
           className="flex items-center gap-2 bg-[#2c1810] text-[#d4a843] px-4 py-2 text-sm font-semibold
@@ -200,6 +223,13 @@ export default function UsersPage() {
           <option value="teacher">Teacher</option>
           <option value="student">Student</option>
         </select>
+        <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)}
+          className="border border-[#c8b89a] bg-white px-3 py-2 text-sm rounded-sm focus:outline-none focus:border-[#d4a843]">
+          <option value="all">All Classes</option>
+          {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+          {/* Uses sentinel value — never collides with DB nulls */}
+          <option value={FILTER_UNASSIGNED}>Unassigned</option>
+        </select>
       </div>
 
       {/* Register modal */}
@@ -219,9 +249,9 @@ export default function UsersPage() {
                 </div>
               )}
               {[
-                { label: "Full Name", key: "name",     type: "text",     ph: "e.g. Aisha Rahman"     },
-                { label: "Email",     key: "email",    type: "email",    ph: "e.g. aisha@school.edu"  },
-                { label: "Password",  key: "password", type: "password", ph: "Min 6 characters"       },
+                { label: "Full Name", key: "name",     type: "text",     ph: "e.g. Aisha Rahman"    },
+                { label: "Email",     key: "email",    type: "email",    ph: "e.g. aisha@school.edu" },
+                { label: "Password",  key: "password", type: "password", ph: "Min 6 characters"      },
               ].map((f) => (
                 <div key={f.key}>
                   <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">{f.label}</label>
@@ -231,15 +261,32 @@ export default function UsersPage() {
                     className="w-full border border-[#c8b89a] px-3 py-2 text-sm rounded-sm focus:outline-none focus:border-[#d4a843]" />
                 </div>
               ))}
-              <div>
-                <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">Role</label>
-                <select value={form.role} onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}
-                  className="w-full border border-[#c8b89a] px-3 py-2 text-sm rounded-sm focus:outline-none focus:border-[#d4a843]">
-                  <option value="student">Student</option>
-                  <option value="teacher">Teacher</option>
-                  <option value="admin">Admin</option>
-                </select>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">Role</label>
+                  <select value={form.role}
+                    onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value, class: "" }))}
+                    className="w-full border border-[#c8b89a] px-3 py-2 text-sm rounded-sm focus:outline-none focus:border-[#d4a843]">
+                    <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">
+                    Class {form.role === "admin" && <span className="normal-case text-[10px] text-[#b0a090]">(N/A)</span>}
+                  </label>
+                  <select value={form.class}
+                    onChange={(e) => setForm((prev) => ({ ...prev, class: e.target.value }))}
+                    disabled={form.role === "admin"}
+                    className="w-full border border-[#c8b89a] px-3 py-2 text-sm rounded-sm focus:outline-none focus:border-[#d4a843] disabled:opacity-40 disabled:cursor-not-allowed">
+                    <option value="">— No class —</option>
+                    {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
               </div>
+
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowForm(false)}
                   className="flex-1 py-2 border border-[#c8b89a] text-sm text-[#7a6a52] hover:bg-[#faf6ee] rounded-sm">
@@ -264,31 +311,23 @@ export default function UsersPage() {
                 <th className="text-left px-4 py-3 text-xs font-mono text-[#7a6a52] uppercase tracking-wider">Name</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-[#7a6a52] uppercase tracking-wider hidden sm:table-cell">Email</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-[#7a6a52] uppercase tracking-wider">Role</th>
+                <th className="text-left px-4 py-3 text-xs font-mono text-[#7a6a52] uppercase tracking-wider hidden lg:table-cell">Class</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-[#7a6a52] uppercase tracking-wider hidden md:table-cell">Status</th>
                 <th className="text-right px-4 py-3 text-xs font-mono text-[#7a6a52] uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="text-center py-10 text-[#7a6a52] text-xs font-mono animate-pulse">Loading users...</td></tr>
+                <tr><td colSpan={6} className="text-center py-10 text-[#7a6a52] text-xs font-mono animate-pulse">Loading users...</td></tr>
               ) : paginatedUsers.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-10 text-[#7a6a52] text-sm">No users found.</td></tr>
+                <tr><td colSpan={6} className="text-center py-10 text-[#7a6a52] text-sm">No users found.</td></tr>
               ) : paginatedUsers.map((user) => (
                 <tr key={user._id} className="border-b border-[#f0e9d6] hover:bg-[#faf6ee] transition-colors">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      {/* ← click avatar to open popup */}
-                      <button
-                        onClick={() => setPopupUser(user)}
-                        className="shrink-0 hover:scale-110 transition-transform"
-                        title="View profile"
-                      >
-                        <Avatar
-                          src={user.avatarUrl}
-                          name={user.name}
-                          role={user.role as any}
-                          size={32}
-                        />
+                      <button onClick={() => setPopupUser(user)}
+                        className="shrink-0 hover:scale-110 transition-transform" title="View profile">
+                        <Avatar src={user.avatarUrl} name={user.name} role={user.role as any} size={32} />
                       </button>
                       <span className="font-semibold text-[#1a1209]">{user.name}</span>
                     </div>
@@ -298,6 +337,9 @@ export default function UsersPage() {
                     <span className={`text-xs font-mono px-2 py-0.5 border rounded-sm capitalize ${roleColor[user.role]}`}>
                       {user.role}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    <ClassBadge cls={user.class} />
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
                     <span className={`text-xs font-mono ${user.isActive ? "text-[#1a7a6e]" : "text-[#c0392b]"}`}>
@@ -328,15 +370,11 @@ export default function UsersPage() {
           <div className="flex items-center gap-2">
             <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1 || filtered.length === 0}
-              className="px-3 py-1.5 border border-[#c8b89a] rounded-sm hover:bg-[#f0e9d6] disabled:opacity-40 transition-colors">
-              Prev
-            </button>
+              className="px-3 py-1.5 border border-[#c8b89a] rounded-sm hover:bg-[#f0e9d6] disabled:opacity-40 transition-colors">Prev</button>
             <span className="px-2">Page {totalPages === 0 ? 0 : currentPage} of {totalPages}</span>
             <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages || filtered.length === 0}
-              className="px-3 py-1.5 border border-[#c8b89a] rounded-sm hover:bg-[#f0e9d6] disabled:opacity-40 transition-colors">
-              Next
-            </button>
+              className="px-3 py-1.5 border border-[#c8b89a] rounded-sm hover:bg-[#f0e9d6] disabled:opacity-40 transition-colors">Next</button>
           </div>
         </div>
       </div>

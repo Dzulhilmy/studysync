@@ -1488,7 +1488,7 @@ export default function Home() {
         {mounted && HERO_MOTES.map((m, i) => <Mote key={i} {...m} />)}
 
         {/* Approval stamp */}
-        <div
+        {/*<div
           className="stamp-el"
           style={{
             position: "absolute",
@@ -1516,7 +1516,7 @@ export default function Home() {
           >
            2026
           </span>
-        </div>
+        </div>*/}
 
         {/* ── HERO TEXT ── */}
         <div

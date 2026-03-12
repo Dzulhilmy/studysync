@@ -148,7 +148,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     style={{ fontFamily: "Georgia, serif" }}>
                     {label}
                   </div>
-                  <div className="text-[10px] font-mono text-[rgba(212,168,67,0.3)] truncate">{jp}</div>
+                  
                 </div>
                 {active && <div className="w-1.5 h-1.5 rounded-full bg-[#d4a843] flex-shrink-0" />}
               </Link>

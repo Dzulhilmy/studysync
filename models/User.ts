@@ -11,6 +11,7 @@ export interface IUser extends Document {
   isActive: boolean
   lastLogin?: Date
   avatarUrl?: string | null
+  class?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -24,7 +25,8 @@ const UserSchema = new Schema<IUser>(
     avatar: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
     lastLogin: { type: Date },
-    avatarUrl: { type: String, default: null }
+    avatarUrl: { type: String, default: null },
+    class: { type: String, default: null }
   },
   { timestamps: true }
 )

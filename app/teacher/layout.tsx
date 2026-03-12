@@ -144,7 +144,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                     style={{ fontFamily: "Georgia, serif" }}>
                     {label}
                   </div>
-                  <div className="text-[10px] font-mono text-[rgba(26,122,110,0.45)] truncate">{jp}</div>
+                  
                 </div>
                 {active && <div className="w-1.5 h-1.5 rounded-full bg-[#d4a843] flex-shrink-0" />}
               </Link>

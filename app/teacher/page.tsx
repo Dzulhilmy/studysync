@@ -112,7 +112,7 @@ export default function TeacherDashboard() {
             />
           </Link>
           <div>
-            <p className="text-[#1a7a6e] text-xs font-mono tracking-[0.2em] uppercase mb-1">先生ダッシュボード</p>
+            
             <h1 className="text-3xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
               Welcome, {session?.user?.name?.split(' ')[0]} 👋
             </h1>
