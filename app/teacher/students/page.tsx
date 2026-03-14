@@ -601,7 +601,7 @@ function GradingPanel({ student, subjectId, onClose, onSaved }: {
                                   className="w-full border border-[#c8b89a] rounded-sm px-2.5 py-1.5 text-sm font-mono focus:outline-none focus:border-[#1a7a6e]" style={{ color: '#1a1209' }} />
                                 {gradeRatio !== null && (
                                   <div className="mt-1 space-y-0.5">
-                                    <div className="text-[10px] font-mono font-bold" style={{ color: gradeColor(Number(inp.grade)) }}>{Math.round(gradeRatio * 100)}% · {gradeLabel(Number(inp.grade))}</div>
+                                    <div className="text-[10px] font-mono font-bold" style={{ color: gradeColor(Math.round(gradeRatio * 100)) }}>{Math.round(gradeRatio * 100)}% · {gradeLabel(Math.round(gradeRatio * 100))}</div>
                                     {gradeRatio < REDO_THRESHOLD && <div className="text-[10px] font-mono text-[#c0392b]">⚠ Below {Math.round(REDO_THRESHOLD * 100)}% pass threshold</div>}
                                   </div>
                                 )}
