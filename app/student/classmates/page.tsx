@@ -14,6 +14,8 @@ interface SubjectGroup {
   subject: { _id: string; name: string; code: string; teacher: string }
   classmates: ClassmateProgress[]
   totalProjects: number
+  // [NEW] class field returned by API so we can display it in the info bar
+  className?: string | null
 }
 
 function ProgressBar({ pct, isMe }: { pct: number; isMe: boolean }) {
@@ -97,6 +99,7 @@ export default function ClassmatesPage() {
                     : 'bg-white text-[#7a6a52] border-[#c8b89a] hover:border-[#63b3ed]'
                 }`}
               >
+                {/* [FIX] show subject code + count, was missing subject code */}
                 {g.subject.code} · {g.classmates.length} students
               </button>
             ))}
@@ -113,6 +116,16 @@ export default function ClassmatesPage() {
                   </div>
                 </div>
                 <div className="h-8 w-px bg-[#c8b89a] hidden sm:block" />
+                {/* [NEW] Show class name if API returns it */}
+                {current.className && (
+                  <>
+                    <div>
+                      <div className="text-xs font-mono text-[#7a6a52] uppercase tracking-wider">Class</div>
+                      <div className="font-semibold text-[#1a1209] text-sm">{current.className}</div>
+                    </div>
+                    <div className="h-8 w-px bg-[#c8b89a] hidden sm:block" />
+                  </>
+                )}
                 <div>
                   <div className="text-xs font-mono text-[#7a6a52]">Teacher</div>
                   <div className="font-semibold text-[#1a1209] text-sm">{current.subject.teacher}</div>
@@ -166,14 +179,12 @@ export default function ClassmatesPage() {
                           {classmate.isMe ? '★' : `#${i + 1}`}
                         </div>
 
-                        {/* ── Avatar replaces the letter box ── */}
                         <div className="shrink-0">
                           <Avatar
                             src={classmate.avatarUrl}
                             name={classmate.name}
                             role="student"
                             size={32}
-                            // "You" row gets a blue ring, others use default
                             className={classmate.isMe ? 'ring-2 ring-[rgba(99,179,237,0.5)]' : ''}
                           />
                         </div>

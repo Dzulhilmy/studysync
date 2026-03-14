@@ -1,97 +1,105 @@
-/**
- * FILE: app/api/student/classmates/route.ts
- *
- * GET → Returns classmates' progress data for subjects this student shares.
- *        Shows submission progress bars but hides grades (privacy).
- *        The logged-in student's own data is labeled separately.
- */
-
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import connectDB from '@/lib/db'
+import dbConnect from '@/lib/db'
+import User from '@/models/User'
 import Subject from '@/models/Subject'
-import Project from '@/models/Project'
 import Submission from '@/models/Submission'
+import Project from '@/models/Project'
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /api/student/classmates
-// Returns progress comparison data for all students in shared subjects
-// ─────────────────────────────────────────────────────────────────────────────
 export async function GET() {
   const session = await getServerSession(authOptions)
-  if (!session || (session.user as any).role !== 'student') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  await connectDB()
+  await dbConnect()
 
-  const studentId = (session.user as any).id
+  // Fetch the current student (need their class field)
+  const me = await User.findById(session.user.id).select('class').lean() as { class?: string | null } | null
+  if (!me) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-  // Step 1: Get subjects this student is enrolled in
-  const subjects = await Subject.find({ students: studentId })
-    .populate('students', 'name') // get classmates' names (not emails — privacy)
+  const myClass = me.class ?? null
+
+  // Find all subjects this student is enrolled in
+  const subjects = await Subject.find({ students: session.user.id })
     .populate('teacher', 'name')
+    .lean() as any[]
 
-  // Step 2: For each subject, build progress data for all students
-  const result = await Promise.all(
-    subjects.map(async (subject) => {
-      // Only approved projects count
-      const approvedProjects = await Project.find({
-        subject: subject._id,
-        status: 'approved',
+  const result = []
+
+  for (const subject of subjects) {
+    // Get ALL enrolled students for this subject
+    const allStudentIds: string[] = (subject.students ?? []).map((id: any) => id.toString())
+
+    // [NEW] Filter to only students in the same class as the current student.
+    // If the student has no class assigned yet, fall back to showing all enrolled students.
+    let classmateIds = allStudentIds
+    if (myClass) {
+      const classmateUsers = await User.find({
+        _id: { $in: allStudentIds },
+        class: myClass,
+      }).select('_id').lean() as { _id: any }[]
+
+      classmateIds = classmateUsers.map((u) => u._id.toString())
+    }
+
+    // Fetch full user records for the filtered classmates
+    const students = await User.find({ _id: { $in: classmateIds } })
+      .select('name avatarUrl class')
+      .lean() as { _id: any; name: string; avatarUrl?: string | null; class?: string | null }[]
+
+    // Fetch approved projects for this subject
+    const projects = await Project.find({
+      subject: subject._id,
+      status: 'approved',
+    }).select('_id').lean() as { _id: any }[]
+
+    const totalProjects = projects.length
+    const projectIds = projects.map((p) => p._id)
+
+    // Build progress for each classmate
+    const classmates = await Promise.all(
+      students.map(async (student) => {
+        const submissions = await Submission.find({
+          student: student._id,
+          project: { $in: projectIds },
+          status: { $in: ['submitted', 'graded'] },
+        }).select('_id').lean()
+
+        const submitted    = submissions.length
+        const progressPct  = totalProjects > 0 ? Math.round((submitted / totalProjects) * 100) : 0
+
+        return {
+          _id:          student._id.toString(),
+          name:         student.name,
+          avatarUrl:    student.avatarUrl ?? null,
+          isMe:         student._id.toString() === session.user.id,
+          submitted,
+          totalProjects,
+          progressPct,
+        }
       })
-      const totalProjects = approvedProjects.length
+    )
 
-      // Step 3: For each classmate, count their submissions
-      const classmatesProgress = await Promise.all(
-        (subject.students as any[]).map(async (classmate) => {
-          const submissions = await Submission.find({
-            project: { $in: approvedProjects.map((p) => p._id) },
-            student: classmate._id,
-          })
-
-          // Count actual submissions (not drafts or pending)
-          const submitted = submissions.filter(
-            (s) => s.status === 'submitted' || s.status === 'graded'
-          ).length
-
-          const progressPct =
-            totalProjects > 0 ? Math.round((submitted / totalProjects) * 100) : 0
-
-          return {
-            _id: classmate._id,
-            name: classmate._id.toString() === studentId
-              ? `${classmate.name} (You)` // label the current student
-              : classmate.name,
-            isMe: classmate._id.toString() === studentId,
-            submitted,
-            totalProjects,
-            progressPct,
-            // NOTE: grades are intentionally NOT included here (privacy)
-          }
-        })
-      )
-
-      // Sort: current student first, then by progress descending
-      classmatesProgress.sort((a, b) => {
-        if (a.isMe) return -1
-        if (b.isMe) return 1
-        return b.progressPct - a.progressPct
-      })
-
-      return {
-        subject: {
-          _id: subject._id,
-          name: subject.name,
-          code: subject.code,
-          teacher: (subject.teacher as any)?.name,
-        },
-        classmates: classmatesProgress,
-        totalProjects,
-      }
+    // Sort: current student first, then by progress descending
+    classmates.sort((a, b) => {
+      if (a.isMe) return -1
+      if (b.isMe) return 1
+      return b.progressPct - a.progressPct
     })
-  )
+
+    result.push({
+      subject: {
+        _id:     subject._id.toString(),
+        name:    subject.name,
+        code:    subject.code,
+        teacher: subject.teacher?.name ?? '—',
+      },
+      // [NEW] expose the class name so the frontend can display it in the info bar
+      className:     myClass ?? null,
+      classmates,
+      totalProjects,
+    })
+  }
 
   return NextResponse.json(result)
 }

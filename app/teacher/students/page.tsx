@@ -439,8 +439,9 @@ function GradingPanel({ student, subjectId, onClose, onSaved }: {
 
   const totalPages   = Math.max(1, Math.ceil(rows.length / PROJECTS_PER_PAGE))
   const pagedRows    = rows.slice((currentPage - 1) * PROJECTS_PER_PAGE, currentPage * PROJECTS_PER_PAGE)
-  const submitted    = pagedRows.filter(r => r.submission && r.submission.status !== 'pending' && r.submission.status !== 'draft')
-  const notSubmitted = pagedRows.filter(r => !r.submission || r.submission.status === 'pending' || r.submission.status === 'draft')
+  // A redo-requested submission keeps its slot in "Submissions" even if status flipped back to pending
+  const submitted    = pagedRows.filter(r => r.submission && (r.submission.redoRequested || (r.submission.status !== 'pending' && r.submission.status !== 'draft')))
+  const notSubmitted = pagedRows.filter(r => !r.submission || (!r.submission.redoRequested && (r.submission.status === 'pending' || r.submission.status === 'draft')))
 
   return (
     <>
@@ -809,9 +810,10 @@ export default function TeacherStudentsPage() {
     const st = card.submission?.status ?? 'pending'
     const matchStatus =
       statusFilter === 'all'       ? true :
-      statusFilter === 'submitted' ? st === 'submitted' :
+      statusFilter === 'submitted' ? (st === 'submitted' || !!card.submission?.redoRequested) :
       statusFilter === 'graded'    ? st === 'graded' :
-      !card.submission || st === 'pending' || st === 'draft'
+      // pending: no submission at all, OR status is pending/draft AND no redo pending
+      !card.submission || (!card.submission.redoRequested && (st === 'pending' || st === 'draft'))
     return matchSearch && matchStatus
   })
 
@@ -914,7 +916,7 @@ export default function TeacherStudentsPage() {
                     {pagedCards.map((card, idx) => {
                       const sub = card.submission
                       const dl  = daysLeft(card.project.deadline)
-                      const hasSubmission = !!sub
+                      const hasSubmission = !!sub && (sub.redoRequested || sub.status !== 'pending')
                       const status  = sub?.status ?? 'pending'
                       const isPassed = sub?.grade != null && sub.grade / card.project.maxScore >= REDO_THRESHOLD
                       const borderColor = sub?.redoRequested ? '#d4a843' : !hasSubmission ? '#e8dfc8' : status === 'graded' && isPassed ? '#1a7a6e' : status === 'graded' ? '#c0392b' : '#1a7a6e'
@@ -959,6 +961,7 @@ export default function TeacherStudentsPage() {
                                     background: !hasSubmission ? 'transparent' : status === 'graded' && isPassed ? 'rgba(26,122,110,0.06)' : status === 'graded' ? 'rgba(192,57,43,0.06)' : 'rgba(212,168,67,0.06)',
                                   }}>
                                   {!hasSubmission ? 'Pending'
+                                    : sub?.redoRequested && (status === 'pending' || status === 'draft') ? <><IconRefresh size={10} color="currentColor" /> Awaiting Redo</>
                                     : status === 'graded' && isPassed ? <><IconApproved size={10} color="currentColor" /> Passed</>
                                     : status === 'graded' ? <><IconGrade size={10} color="currentColor" /> Graded</>
                                     : <><IconInbox size={10} color="currentColor" /> Submitted</>}
@@ -998,6 +1001,8 @@ export default function TeacherStudentsPage() {
                                 <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-sm border ${isPassed ? 'text-[#1a7a6e] bg-[rgba(26,122,110,0.08)] border-[rgba(26,122,110,0.25)]' : 'text-[#c0392b] bg-[rgba(192,57,43,0.06)] border-[rgba(192,57,43,0.25)]'}`}>
                                   {sub.grade}/{card.project.maxScore} · {Math.round((sub.grade / card.project.maxScore) * 100)}%{isPassed ? ' ✓' : ' ✗'}
                                 </span>
+                              ) : sub?.redoRequested ? (
+                                <span className="text-[11px] font-mono text-[#b8882a] flex items-center gap-1"><IconRefresh size={11} color="#b8882a" /> Awaiting resubmission</span>
                               ) : hasSubmission ? (
                                 <span className="text-[11px] font-mono text-[#b8882a] flex items-center gap-1"><IconWarning size={11} color="#b8882a" /> Awaiting grade</span>
                               ) : (

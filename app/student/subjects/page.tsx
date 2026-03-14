@@ -105,9 +105,7 @@ export default function StudentSubjectsPage() {
                 }`}>
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <span className={`text-xs font-mono ${selected?._id === s._id ? 'text-[#d4a843]' : 'text-[#c0392b]'}`}>
-                      {s.code}
-                    </span>
+                    
                     <div className={`font-bold text-sm mt-0.5 ${selected?._id === s._id ? 'text-[#faf6ee]' : 'text-[#1a1209]'}`}
                       style={{ fontFamily: 'Georgia, serif' }}>
                       {s.name}
