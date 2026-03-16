@@ -41,36 +41,59 @@ function StatCard({
 }
 
 export default function AdminDashboard() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [stats,   setStats]   = useState<Stats>({ users: 0, teachers: 0, students: 0, subjects: 0, projects: 0, pending: 0 })
   const [loading, setLoading] = useState(true)
 
   const avatarUrl = (session?.user as any)?.avatarUrl ?? null
 
+  // ── Only fetch once the session is authenticated ──────────────────────────
   useEffect(() => {
+    if (status !== 'authenticated') return
+
+    let cancelled = false
+
     async function load() {
+      setLoading(true)
       try {
         const [uRes, sRes, pRes] = await Promise.all([
           fetch('/api/admin/users'),
           fetch('/api/admin/subjects'),
           fetch('/api/admin/projects'),
         ])
+
+        if (!uRes.ok || !sRes.ok || !pRes.ok) return
+
         const users    = await uRes.json()
         const subjects = await sRes.json()
         const projects = await pRes.json()
+
+        if (cancelled) return
+
+        const usersArr    = Array.isArray(users)    ? users    : []
+        const subjectsArr = Array.isArray(subjects) ? subjects : []
+        const projectsArr = Array.isArray(projects) ? projects : []
+
         setStats({
-          users:    users.length,
-          teachers: users.filter((u: any) => u.role === 'teacher').length,
-          students: users.filter((u: any) => u.role === 'student').length,
-          subjects: subjects.length,
-          projects: projects.length,
-          pending:  projects.filter((p: any) => p.status === 'pending').length,
+          users:    usersArr.length,
+          teachers: usersArr.filter((u: any) => u.role === 'teacher').length,
+          students: usersArr.filter((u: any) => u.role === 'student').length,
+          subjects: subjectsArr.length,
+          projects: projectsArr.length,
+          pending:  projectsArr.filter((p: any) => p.status === 'pending').length,
         })
-      } catch (e) { console.error(e) }
-      finally { setLoading(false) }
+      } catch (e) {
+        console.error('[admin/dashboard]', e)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
+
     load()
-  }, [])
+    return () => { cancelled = true }
+  }, [status])
+
+  const isResolving = status === 'loading' || (status === 'authenticated' && loading)
 
   const statCards = [
     { Icon: IconUsers,    label: 'Total Users',      value: stats.users,    sub: 'all roles', iconColor: '#1a7a6e', color: 'text-[#1a7a6e] border-[rgba(26,122,110,0.3)] bg-[rgba(26,122,110,0.06)]' },
@@ -90,10 +113,9 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      {/* ── Header: avatar + greeting ───────────────────────────────── */}
+      {/* ── Header ────────────────────────────────────────────────────── */}
       <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
-          {/* Clickable avatar links to profile */}
           <Link href="/admin/profile" title="Edit profile">
             <Avatar
               src={avatarUrl}
@@ -105,12 +127,7 @@ export default function AdminDashboard() {
           </Link>
           <div>
             <h1 className="text-3xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
-              Welcome back, {session?.user?.name?.split(' ')[1]}
-              <span className="ml-2 inline-flex items-center">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                  <text x="0" y="26" fontSize="26">👋</text>
-                </svg>
-              </span>
+              Welcome back, {session?.user?.name?.split(' ')[1]} 👋
             </h1>
             <p className="text-[#7a6a52] text-sm mt-1">Here's what's happening in StudySync today.</p>
           </div>
@@ -128,8 +145,16 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats grid */}
-      {loading ? (
-        <div className="text-[#7a6a52] text-sm font-mono animate-pulse">Loading statistics...</div>
+      {isResolving ? (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-white border border-[#c8b89a] rounded-sm p-5 shadow-[3px_3px_0_#c8b89a] animate-pulse">
+              <div className="w-10 h-10 rounded-sm bg-[#f0e9d6] mb-3" />
+              <div className="h-8 w-10 bg-[#f0e9d6] rounded mb-1" />
+              <div className="h-3 w-24 bg-[#f0e9d6] rounded" />
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {statCards.map((card) => (
@@ -143,13 +168,13 @@ export default function AdminDashboard() {
         <h2 className="font-bold text-[#1a1209] mb-4 text-lg" style={{ fontFamily: 'Georgia, serif' }}>Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {quickActions.map(({ href, Icon, label }) => (
-            <a key={href} href={href}
+            <Link key={href} href={href}
               className="flex flex-col items-center gap-2.5 p-4 border border-[#c8b89a] rounded-sm hover:bg-[#faf6ee] hover:border-[#d4a843] transition-all group text-center">
               <div className="w-10 h-10 rounded-sm bg-[rgba(212,168,67,0.08)] group-hover:bg-[rgba(212,168,67,0.15)] flex items-center justify-center transition-colors">
                 <Icon size={22} color="#d4a843" />
               </div>
               <span className="text-xs font-semibold text-[#7a6a52] group-hover:text-[#1a1209]">{label}</span>
-            </a>
+            </Link>
           ))}
         </div>
       </div>

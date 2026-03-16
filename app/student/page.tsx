@@ -29,29 +29,47 @@ const STATUS_MAP: Record<string, { Icon: IconComponent; label: string; color: st
 }
 
 export default function StudentDashboard() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [submissions,  setSubmissions]  = useState<Submission[]>([])
   const [subjectCount, setSubjectCount] = useState(0)
   const [loading,      setLoading]      = useState(true)
 
   const avatarUrl = (session?.user as any)?.avatarUrl ?? null
 
+  // ── Only fetch once the session is authenticated ──────────────────────────
   useEffect(() => {
+    if (status !== 'authenticated') return
+
+    let cancelled = false
+
     async function load() {
+      setLoading(true)
       try {
         const [subRes, submiRes] = await Promise.all([
           fetch('/api/student/subjects'),
           fetch('/api/student/submissions'),
         ])
+
+        if (!subRes.ok || !submiRes.ok) return
+
         const subjectsRaw = await subRes.json()
         const subsRaw     = await submiRes.json()
+
+        if (cancelled) return
+
+        // /api/student/subjects returns an array of subject groups
         setSubjectCount((Array.isArray(subjectsRaw) ? subjectsRaw : []).length)
         setSubmissions(Array.isArray(subsRaw) ? subsRaw : [])
-      } catch (e) { console.error(e) }
-      finally { setLoading(false) }
+      } catch (e) {
+        console.error('[student/dashboard]', e)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
+
     load()
-  }, [])
+    return () => { cancelled = true }
+  }, [status]) // re-run if auth status changes
 
   const submitted = submissions.filter((s) => s.status === 'submitted' || s.status === 'graded').length
   const graded    = submissions.filter((s) => s.status === 'graded').length
@@ -59,23 +77,26 @@ export default function StudentDashboard() {
 
   const warnings = submissions.filter((s) => {
     if (s.status === 'submitted' || s.status === 'graded') return false
-    const daysLeft = Math.ceil((new Date(s.project?.deadline).getTime() - Date.now()) / 86400000)
+    if (!s.project?.deadline) return false
+    const daysLeft = Math.ceil((new Date(s.project.deadline).getTime() - Date.now()) / 86400000)
     return daysLeft <= 5 && daysLeft >= 0
   })
 
   const statCards = [
-    { Icon: IconSubjects,  label: 'Subjects', value: subjectCount, href: '/student/subjects', iconColor: '#63b3ed', color: 'text-[#63b3ed] border-[rgba(99,179,237,0.3)] bg-[rgba(99,179,237,0.06)]'   },
-    { Icon: IconSubmitted, label: 'Submitted', value: submitted,   href: '/student/projects', iconColor: '#1a7a6e', color: 'text-[#1a7a6e] border-[rgba(26,122,110,0.3)] bg-[rgba(26,122,110,0.06)]'  },
-    { Icon: IconApproved,  label: 'Graded',    value: graded,      href: '/student/projects', iconColor: '#d4a843', color: 'text-[#d4a843] border-[rgba(212,168,67,0.3)] bg-[rgba(212,168,67,0.08)]'   },
-    { Icon: IconDraft,     label: 'Drafts',    value: drafts,      href: '/student/projects', iconColor: '#8b5a2b', color: 'text-[#8b5a2b] border-[rgba(139,90,43,0.3)] bg-[rgba(139,90,43,0.06)]'     },
+    { Icon: IconSubjects,  label: 'Subjects',  value: subjectCount, href: '/student/subjects', iconColor: '#63b3ed', color: 'text-[#63b3ed] border-[rgba(99,179,237,0.3)] bg-[rgba(99,179,237,0.06)]'  },
+    { Icon: IconSubmitted, label: 'Submitted', value: submitted,    href: '/student/projects', iconColor: '#1a7a6e', color: 'text-[#1a7a6e] border-[rgba(26,122,110,0.3)] bg-[rgba(26,122,110,0.06)]' },
+    { Icon: IconApproved,  label: 'Graded',    value: graded,       href: '/student/projects', iconColor: '#d4a843', color: 'text-[#d4a843] border-[rgba(212,168,67,0.3)] bg-[rgba(212,168,67,0.08)]'  },
+    { Icon: IconDraft,     label: 'Drafts',    value: drafts,       href: '/student/projects', iconColor: '#8b5a2b', color: 'text-[#8b5a2b] border-[rgba(139,90,43,0.3)] bg-[rgba(139,90,43,0.06)]'    },
   ]
+
+  // Show skeleton while session is resolving
+  const isResolving = status === 'loading' || (status === 'authenticated' && loading)
 
   return (
     <div>
-      {/* ── Header: avatar + greeting ───────────────────────────────── */}
+      {/* ── Header ────────────────────────────────────────────────────── */}
       <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
-          {/* ← Clickable avatar links to profile */}
           <Link href="/student/profile" title="Edit profile">
             <Avatar
               src={avatarUrl}
@@ -102,14 +123,14 @@ export default function StudentDashboard() {
       {warnings.length > 0 && (
         <div className="mb-6 space-y-2">
           {warnings.map((s) => {
-            const daysLeft = Math.ceil((new Date(s.project?.deadline).getTime() - Date.now()) / 86400000)
+            const daysLeft = Math.ceil((new Date(s.project.deadline).getTime() - Date.now()) / 86400000)
             return (
               <div key={s._id} className="flex items-start gap-3 bg-[rgba(212,168,67,0.08)] border border-[rgba(212,168,67,0.4)] rounded-sm px-4 py-3">
                 <div className="mt-0.5 flex-shrink-0">
                   <IconWarning size={20} color="#d4a843" />
                 </div>
                 <div>
-                  <span className="text-sm font-semibold text-[#8b5a2b]">{s.project?.title}</span>
+                  <span className="text-sm font-semibold text-[#8b5a2b]">{s.project.title}</span>
                   <span className="text-sm text-[#7a6a52]"> is due in </span>
                   <span className="text-sm font-bold text-[#c0392b]">{daysLeft} day{daysLeft !== 1 ? 's' : ''}</span>
                   <span className="text-sm text-[#7a6a52]"> and you haven't submitted yet!</span>
@@ -123,9 +144,17 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* Stats */}
-      {loading ? (
-        <div className="text-[#7a6a52] text-sm font-mono animate-pulse">Loading...</div>
+      {/* Stats grid */}
+      {isResolving ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white border border-[#c8b89a] rounded-sm p-5 shadow-[3px_3px_0_#c8b89a] animate-pulse">
+              <div className="w-10 h-10 rounded-sm bg-[#f0e9d6] mb-3" />
+              <div className="h-8 w-10 bg-[#f0e9d6] rounded mb-1" />
+              <div className="h-3 w-20 bg-[#f0e9d6] rounded" />
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {statCards.map(({ Icon, label, value, href, iconColor, color }) => (
@@ -151,7 +180,19 @@ export default function StudentDashboard() {
           <Link href="/student/projects" className="text-xs text-[#63b3ed] hover:underline">View all →</Link>
         </div>
 
-        {submissions.length === 0 ? (
+        {isResolving ? (
+          <div className="divide-y divide-[#f0e9d6]">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="flex items-center justify-between px-5 py-3 animate-pulse">
+                <div>
+                  <div className="h-4 w-48 bg-[#f0e9d6] rounded mb-1.5" />
+                  <div className="h-3 w-24 bg-[#f0e9d6] rounded" />
+                </div>
+                <div className="h-6 w-20 bg-[#f0e9d6] rounded-sm" />
+              </div>
+            ))}
+          </div>
+        ) : submissions.length === 0 ? (
           <div className="p-10 text-center">
             <div className="flex justify-center mb-3">
               <IconEmpty size={40} color="#c8b89a" />
@@ -169,7 +210,7 @@ export default function StudentDashboard() {
                     <div className="text-sm font-semibold text-[#1a1209]">{s.project?.title}</div>
                     <div className="text-xs text-[#7a6a52] font-mono">
                       {s.project?.subject?.code} &middot;{' '}
-                      {s.project?.deadline ? `Due ${new Date(s.project.deadline).toLocaleDateString()}` : ''}
+                      {s.project?.deadline ? `Due ${new Date(s.project.deadline).toLocaleDateString('en-MY')}` : ''}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

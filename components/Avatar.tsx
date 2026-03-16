@@ -1,33 +1,32 @@
 'use client'
 
-import Image from 'next/image'
 import { useState } from 'react'
 
 // ── Role colour config ────────────────────────────────────────────────────────
 const ROLE_CONFIG = {
   admin: {
-    bg:     '#1a3a2a',
-    ring:   'rgba(192,57,43,0.5)',
-    text:   '#d4a843',
-    label:  '#c0392b',
+    bg:    '#1a3a2a',
+    ring:  'rgba(192,57,43,0.5)',
+    text:  '#d4a843',
+    label: '#c0392b',
   },
   teacher: {
-    bg:     '#1a2535',
-    ring:   'rgba(99,179,237,0.5)',
-    text:   '#63b3ed',
-    label:  '#63b3ed',
+    bg:    '#1a2535',
+    ring:  'rgba(99,179,237,0.5)',
+    text:  '#63b3ed',
+    label: '#63b3ed',
   },
   student: {
-    bg:     '#2c1810',
-    ring:   'rgba(212,168,67,0.4)',
-    text:   '#d4a843',
-    label:  '#d4a843',
+    bg:    '#2c1810',
+    ring:  'rgba(212,168,67,0.4)',
+    text:  '#d4a843',
+    label: '#d4a843',
   },
   default: {
-    bg:     '#2a2420',
-    ring:   'rgba(200,184,154,0.4)',
-    text:   '#c8b89a',
-    label:  '#a89880',
+    bg:    '#2a2420',
+    ring:  'rgba(200,184,154,0.4)',
+    text:  '#c8b89a',
+    label: '#a89880',
   },
 }
 
@@ -53,7 +52,7 @@ function UserIcon({ size, color }: { size: number; color: string }) {
 // ── Avatar component ──────────────────────────────────────────────────────────
 
 interface AvatarProps {
-  /** URL of the user's uploaded image */
+  /** URL of the user's uploaded image — can be any external domain */
   src?:         string | null
   /** User's display name — used to generate initials fallback */
   name?:        string | null
@@ -70,10 +69,10 @@ interface AvatarProps {
 export default function Avatar({
   src,
   name,
-  role       = 'default' as any,
-  size       = 40,
+  role        = 'default' as any,
+  size        = 40,
   showRoleDot = false,
-  className  = '',
+  className   = '',
 }: AvatarProps) {
   const [imgError, setImgError] = useState(false)
   const cfg = ROLE_CONFIG[role] ?? ROLE_CONFIG.default
@@ -88,11 +87,14 @@ export default function Avatar({
         .join('')
     : null
 
-  const fontSize   = Math.max(10, Math.round(size * 0.36))
-  const dotSize    = Math.max(8, Math.round(size * 0.22))
-  const ringWidth  = size >= 48 ? 2 : 1.5
+  const fontSize  = Math.max(10, Math.round(size * 0.36))
+  const dotSize   = Math.max(8,  Math.round(size * 0.22))
+  const ringWidth = size >= 48 ? 2 : 1.5
 
-  const showImage = src && !imgError
+  // Show the image only when we have a URL and it hasn't errored.
+  // Using a plain <img> instead of next/image so ANY external hostname
+  // works without needing to be listed in next.config.js.
+  const showImage = !!src && !imgError
 
   return (
     <div
@@ -103,13 +105,15 @@ export default function Avatar({
       <div
         className="w-full h-full rounded-full overflow-hidden flex items-center justify-center"
         style={{
-          background:  showImage ? 'transparent' : cfg.bg,
-          boxShadow:   `0 0 0 ${ringWidth}px ${cfg.ring}, 2px 2px 0 rgba(0,0,0,0.25)`,
+          background: showImage ? 'transparent' : cfg.bg,
+          boxShadow:  `0 0 0 ${ringWidth}px ${cfg.ring}, 2px 2px 0 rgba(0,0,0,0.25)`,
         }}
       >
         {showImage ? (
-          <Image
-            src={src}
+          // ── plain <img> — works with any hostname, no next.config.js changes needed ──
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src!}
             alt={name ?? 'User avatar'}
             width={size}
             height={size}
@@ -121,9 +125,9 @@ export default function Avatar({
           <span
             className="font-bold select-none leading-none"
             style={{
-              fontFamily: 'Georgia, serif',
-              fontSize:   fontSize,
-              color:      cfg.text,
+              fontFamily:    'Georgia, serif',
+              fontSize:      fontSize,
+              color:         cfg.text,
               letterSpacing: '0.03em',
             }}
           >
@@ -138,11 +142,11 @@ export default function Avatar({
       {/* Role indicator dot */}
       {showRoleDot && (
         <span
-          className="absolute bottom-0 right-0 rounded-full border-2 border-white"
+          className="absolute bottom-0 right-0 rounded-full border-2"
           style={{
-            width:      dotSize,
-            height:     dotSize,
-            background: cfg.label,
+            width:       dotSize,
+            height:      dotSize,
+            background:  cfg.label,
             borderColor: '#faf6ee',
           }}
         />
@@ -151,7 +155,7 @@ export default function Avatar({
   )
 }
 
-// ── Exports for convenience ───────────────────────────────────────────────────
+// ── AvatarWithLabel ───────────────────────────────────────────────────────────
 
 /**
  * Larger avatar with name + role label beside it — for profile headers / sidebars

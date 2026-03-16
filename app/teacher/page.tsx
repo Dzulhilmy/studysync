@@ -42,24 +42,35 @@ function StatCard({
 }
 
 export default function TeacherDashboard() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const [stats,         setStats]         = useState<Stats>({ subjects: 0, projects: 0, pending: 0, approved: 0, rejected: 0, announcements: 0 })
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading,       setLoading]       = useState(true)
 
   const avatarUrl = (session?.user as any)?.avatarUrl ?? null
 
+  // ── Only fetch once the session is authenticated ──────────────────────────
   useEffect(() => {
+    if (status !== 'authenticated') return
+
+    let cancelled = false
+
     async function load() {
+      setLoading(true)
       try {
         const [sRes, pRes, aRes] = await Promise.all([
           fetch('/api/teacher/subjects'),
           fetch('/api/teacher/projects'),
           fetch('/api/teacher/announcements'),
         ])
+
+        if (!sRes.ok || !pRes.ok || !aRes.ok) return
+
         const subjectsRaw      = await sRes.json()
         const projectsRaw      = await pRes.json()
         const announcementsRaw = await aRes.json()
+
+        if (cancelled) return
 
         const subjects      = Array.isArray(subjectsRaw)      ? subjectsRaw      : []
         const projects      = Array.isArray(projectsRaw)      ? projectsRaw      : []
@@ -74,11 +85,18 @@ export default function TeacherDashboard() {
           announcements: announcements.length,
         })
         setNotifications(projects.filter((p: any) => p.warnUnsubmitted))
-      } catch (e) { console.error(e) }
-      finally { setLoading(false) }
+      } catch (e) {
+        console.error('[teacher/dashboard]', e)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
+
     load()
-  }, [])
+    return () => { cancelled = true }
+  }, [status])
+
+  const isResolving = status === 'loading' || (status === 'authenticated' && loading)
 
   const statCards = [
     { Icon: IconSubjects,      label: 'My Subjects',      value: stats.subjects,      href: '/teacher/subjects',      iconColor: '#1a7a6e', color: 'text-[#1a7a6e] border-[rgba(26,122,110,0.3)] bg-[rgba(26,122,110,0.06)]'   },
@@ -98,10 +116,9 @@ export default function TeacherDashboard() {
 
   return (
     <div>
-      {/* ── Header: avatar + greeting ───────────────────────────────── */}
+      {/* ── Header ────────────────────────────────────────────────────── */}
       <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
-          {/* Clickable avatar links to profile */}
           <Link href="/teacher/profile" title="Edit profile">
             <Avatar
               src={avatarUrl}
@@ -112,7 +129,6 @@ export default function TeacherDashboard() {
             />
           </Link>
           <div>
-            
             <h1 className="text-3xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
               Welcome, {session?.user?.name?.split(' ')[0]} 👋
             </h1>
@@ -144,8 +160,16 @@ export default function TeacherDashboard() {
       )}
 
       {/* Stats */}
-      {loading ? (
-        <div className="text-[#7a6a52] text-sm font-mono animate-pulse">Loading...</div>
+      {isResolving ? (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-white border border-[#c8b89a] rounded-sm p-5 shadow-[3px_3px_0_#c8b89a] animate-pulse">
+              <div className="w-10 h-10 rounded-sm bg-[#f0e9d6] mb-3" />
+              <div className="h-8 w-10 bg-[#f0e9d6] rounded mb-1" />
+              <div className="h-3 w-24 bg-[#f0e9d6] rounded" />
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {statCards.map((card) => (
