@@ -13,15 +13,17 @@ export default function AvatarUploader({ role = 'student', size = 80 }: AvatarUp
   const { data: session, update } = useSession()
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const [preview,  setPreview]  = useState<string | null>(null)
-  const [saving,   setSaving]   = useState(false)
-  const [saved,    setSaved]    = useState(false)
-  const [error,    setError]    = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saved,  setSaved]  = useState(false)
+  const [error,  setError]  = useState<string | null>(null)
 
-  const currentAvatar = preview ?? ((session?.user as any)?.avatarUrl ?? null)
+  // Always read from the live session — never from local state.
+  // After update() resolves, session.user.avatarUrl will contain the new value
+  // and the component re-renders automatically.
+  const currentAvatar = (session?.user as any)?.avatarUrl ?? null
   const userName      = session?.user?.name ?? null
 
-  // ── Convert file → base64 data URL ──────────────────────────────────────────
+  // Convert file to base64 data URL
   function fileToBase64(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -31,7 +33,6 @@ export default function AvatarUploader({ role = 'student', size = 80 }: AvatarUp
     })
   }
 
-  // ── Pick file ────────────────────────────────────────────────────────────────
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -39,13 +40,10 @@ export default function AvatarUploader({ role = 'student', size = 80 }: AvatarUp
     setError(null)
     setSaved(false)
 
-    // Validate type
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       setError('Only JPG, PNG or WebP images are allowed.')
       return
     }
-
-    // Validate size (2 MB)
     if (file.size > 2 * 1024 * 1024) {
       setError('Image must be smaller than 2 MB.')
       return
@@ -53,13 +51,10 @@ export default function AvatarUploader({ role = 'student', size = 80 }: AvatarUp
 
     setSaving(true)
     try {
-      // 1. Convert to base64 — this is the URL we store in MongoDB
+      // 1. Convert to permanent base64 data URL
       const base64 = await fileToBase64(file)
 
-      // 2. Show instant preview
-      setPreview(base64)
-
-      // 3. Save to database via API
+      // 2. Save to MongoDB
       const res = await fetch('/api/auth/avatar', {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -68,26 +63,23 @@ export default function AvatarUploader({ role = 'student', size = 80 }: AvatarUp
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.error ?? `HTTP ${res.status}`)
+        throw new Error(body.error ?? `Server error (${res.status})`)
       }
 
-      // 4. Update the NextAuth session so the new avatar appears everywhere
-      //    without requiring a full logout/login cycle
+      // 3. Push new avatarUrl into the NextAuth JWT so session.user.avatarUrl
+      //    updates immediately in ALL components without logout/login
       await update({ avatarUrl: base64 })
 
       setSaved(true)
     } catch (err: any) {
       console.error('[AvatarUploader]', err)
       setError(err.message ?? 'Failed to save avatar. Please try again.')
-      setPreview(null)
     } finally {
       setSaving(false)
-      // Reset input so the same file can be re-selected if needed
       if (inputRef.current) inputRef.current.value = ''
     }
   }
 
-  // ── Remove avatar ────────────────────────────────────────────────────────────
   async function handleRemove() {
     setError(null)
     setSaved(false)
@@ -98,9 +90,8 @@ export default function AvatarUploader({ role = 'student', size = 80 }: AvatarUp
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ avatarUrl: null }),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw new Error(`Server error (${res.status})`)
       await update({ avatarUrl: null })
-      setPreview(null)
       setSaved(true)
     } catch (err: any) {
       setError(err.message ?? 'Failed to remove avatar.')
@@ -111,22 +102,12 @@ export default function AvatarUploader({ role = 'student', size = 80 }: AvatarUp
 
   return (
     <div className="">
-      
 
       <div className="flex items-center gap-5 flex-wrap">
-        {/* Avatar preview */}
-        <Avatar
-          src={currentAvatar}
-          name={userName}
-          role={role}
-          size={size}
-          showRoleDot
-        />
+        <Avatar src={currentAvatar} name={userName} role={role} size={size} showRoleDot />
 
-        {/* Actions */}
         <div>
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            {/* Hidden file input */}
             <input
               ref={inputRef}
               type="file"
@@ -136,21 +117,15 @@ export default function AvatarUploader({ role = 'student', size = 80 }: AvatarUp
               disabled={saving}
             />
 
-            {/* Upload / Change button */}
             <button
               onClick={() => inputRef.current?.click()}
               disabled={saving}
-              className="px-4 py-2 text-sm font-semibold rounded-sm transition-all disabled:opacity-50 cursor-pointer"
-              style={{
-                background:  '#1a3a2a',
-                color:       '#d4a843',
-                border:      '1px solid rgba(212,168,67,0.35)',
-              }}
+              className="px-4 py-2 text-sm font-semibold rounded-sm transition-all cursor-pointer"
+              style={{ background: '#1a3a2a', color: '#d4a843', border: '1px solid rgba(212,168,67,0.35)' }}
             >
               {saving ? 'Saving…' : currentAvatar ? 'Change Photo' : 'Upload Photo'}
             </button>
 
-            {/* Remove button — only when avatar exists */}
             {currentAvatar && !saving && (
               <button
                 onClick={handleRemove}
@@ -161,18 +136,12 @@ export default function AvatarUploader({ role = 'student', size = 80 }: AvatarUp
             )}
           </div>
 
-          {/* Hint */}
           <p className="text-[11px] font-mono text-[#7a6a52] mb-1.5">
             JPG, PNG or WebP · Max 2 MB · Square recommended
           </p>
 
-          {/* Status messages */}
-          {saved && !error && (
-            <p className="text-[12px] font-mono text-[#1a7a6e]">✓ Avatar updated</p>
-          )}
-          {error && (
-            <p className="text-[12px] font-mono text-[#c0392b]">✗ {error}</p>
-          )}
+          {saved && !error && <p className="text-[12px] font-mono text-[#1a7a6e]">✓ Avatar updated</p>}
+          {error            && <p className="text-[12px] font-mono text-[#c0392b]">✗ {error}</p>}
         </div>
       </div>
     </div>

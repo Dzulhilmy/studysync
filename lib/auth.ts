@@ -3,7 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import connectDB from './db'
 import User from '@/models/User'
-
+ 
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -16,49 +16,43 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email and password are required')
         }
-
+ 
         await connectDB()
-
+ 
         const user = await User.findOne({ email: credentials.email })
-
+ 
         if (!user) throw new Error('No account found with that email')
         if (!user.isActive) throw new Error('Your account has been deactivated')
-
+ 
         const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
         if (!isPasswordValid) throw new Error('Incorrect password')
-
+ 
         // Update last login
         await User.findByIdAndUpdate(user._id, { lastLogin: new Date() })
-
+ 
         return {
           id: user._id.toString(),
           name: user.name,
           email: user.email,
           role: user.role,
           avatar: user.avatar,
+          avatarUrl: user.avatarUrl ?? null,
         }
       },
     }),
   ],
-
+ 
   callbacks: {
-    // ── ADD THIS: update lastLoginAt every time a student logs in ──────────────
-    async signIn({ user }) {
-      try {
-        await connectDB()
-        await User.findByIdAndUpdate(
-          (user as any).id,
-          { lastLoginAt: new Date() },
-          { new: false }   // we don't need the result
-        )
-      } catch (err) {
-        // Never block login because of this
-        console.error('[AUTH] Failed to update lastLoginAt:', err)
-      }
-      return true   // always allow the sign-in
-    },
-    // ─────────────────────────────────────────────────────────────────────────
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+
+    // 1. Catch the update() call from the client
+    if (trigger === "update" && session) {
+    // Merge the new avatarUrl into the token
+    if (session.avatarUrl !== undefined) {
+      token.avatarUrl = session.avatarUrl
+    }
+    return token
+  }
       // On sign in, attach role + id to token
       if (user) {
         token.id = user.id
@@ -74,11 +68,12 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id
         ;(session.user as any).role = token.role
         ;(session.user as any).avatar = token.avatar
-        ;(session.user as any).avatarUrl = token.avatarUrl  // ← add this
+        ;(session.user as any).avatarUrl = token.avatarUrl
       }
       return session
     },
   },
+ 
 
   pages: {
     signIn: '/login',

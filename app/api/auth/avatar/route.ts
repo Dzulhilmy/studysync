@@ -19,36 +19,30 @@ export async function PATCH(req: Request) {
 
   const { avatarUrl } = body
 
-  // If an image was provided, do a basic sanity check
   if (avatarUrl !== null && avatarUrl !== undefined) {
-    // Must be a base64 data URL or a regular https:// URL
     const isBase64  = typeof avatarUrl === 'string' && avatarUrl.startsWith('data:image/')
-    const isHttpUrl = typeof avatarUrl === 'string' && avatarUrl.startsWith('https://')
-
+    const isHttpUrl = typeof avatarUrl === 'string' && (
+      avatarUrl.startsWith('https://') || avatarUrl.startsWith('http://localhost')
+    )
     if (!isBase64 && !isHttpUrl) {
-      return NextResponse.json(
-        { error: 'avatarUrl must be a base64 data URI or an https:// URL' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'avatarUrl must be a base64 data URI or a valid URL' }, { status: 400 })
     }
-
-    // Reject base64 strings larger than ~2 MB (2 MB file → ~2.7 MB base64)
     if (isBase64 && avatarUrl.length > 3_000_000) {
-      return NextResponse.json(
-        { error: 'Image is too large. Maximum size is 2 MB.' },
-        { status: 413 }
-      )
+      return NextResponse.json({ error: 'Image too large. Maximum size is 2 MB.' }, { status: 413 })
     }
   }
 
   await dbConnect()
 
-  // Persist to MongoDB — null clears the avatar
-  await User.findByIdAndUpdate(
+  const updated = await User.findByIdAndUpdate(
     session.user.id,
     { avatarUrl: avatarUrl ?? null },
     { new: true }
-  )
+  ).select('avatarUrl').lean() as any
 
-  return NextResponse.json({ success: true, avatarUrl: avatarUrl ?? null })
+  if (!updated) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 })
+  }
+
+  return NextResponse.json({ success: true, avatarUrl: updated.avatarUrl ?? null })
 }

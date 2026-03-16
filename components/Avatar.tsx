@@ -52,7 +52,7 @@ function UserIcon({ size, color }: { size: number; color: string }) {
 // ── Avatar component ──────────────────────────────────────────────────────────
 
 interface AvatarProps {
-  /** URL of the user's uploaded image — can be any external domain */
+  /** URL of the user's uploaded image (remote URL, blob:, data:, or relative path) */
   src?:         string | null
   /** User's display name — used to generate initials fallback */
   name?:        string | null
@@ -91,9 +91,8 @@ export default function Avatar({
   const dotSize   = Math.max(8,  Math.round(size * 0.22))
   const ringWidth = size >= 48 ? 2 : 1.5
 
-  // Show the image only when we have a URL and it hasn't errored.
-  // Using a plain <img> instead of next/image so ANY external hostname
-  // works without needing to be listed in next.config.js.
+  // Use native <img> so blob:, data:, and any remote URL all work without
+  // needing Next.js domain configuration.
   const showImage = !!src && !imgError
 
   return (
@@ -110,10 +109,9 @@ export default function Avatar({
         }}
       >
         {showImage ? (
-          // ── plain <img> — works with any hostname, no next.config.js changes needed ──
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={src!}
+            src={src}
             alt={name ?? 'User avatar'}
             width={size}
             height={size}
@@ -121,7 +119,6 @@ export default function Avatar({
             onError={() => setImgError(true)}
           />
         ) : initials ? (
-          // Initials fallback
           <span
             className="font-bold select-none leading-none"
             style={{
@@ -134,7 +131,6 @@ export default function Avatar({
             {initials}
           </span>
         ) : (
-          // Icon fallback — when no image AND no name
           <UserIcon size={size} color={cfg.text} />
         )}
       </div>
@@ -157,9 +153,6 @@ export default function Avatar({
 
 // ── AvatarWithLabel ───────────────────────────────────────────────────────────
 
-/**
- * Larger avatar with name + role label beside it — for profile headers / sidebars
- */
 export function AvatarWithLabel({
   src, name, role, email, size = 48,
 }: AvatarProps & { email?: string }) {
