@@ -4,7 +4,13 @@ import { NextResponse } from 'next/server'
 export default withAuth(
   function middleware(req) {
     const { pathname } = req.nextUrl
-    const role = req.nextauth.token?.role as string
+    
+    // Safely extract, lowercase, and trim the role
+    const token = req.nextauth.token
+    const role = String(token?.role || '').toLowerCase().trim()
+
+    // Print to terminal so we can see what the middleware sees
+    console.log(`🛡️ [Middleware] Path: ${pathname} | Token Role: '${token?.role}' | Parsed Role: '${role}'`)
 
     // Allow print pages without role restrictions (accessible to any authenticated user)
     if (pathname.includes('/print')) {
@@ -12,13 +18,16 @@ export default withAuth(
     }
 
     // Role-based route guards
-    if (pathname.startsWith('/admin')   && role !== 'admin')   {
+    if (pathname.startsWith('/admin') && role !== 'admin') {
+      console.log('🚫 [Middleware] Kicking out of /admin. Role is not admin.')
       return NextResponse.redirect(new URL('/login', req.url))
     }
     if (pathname.startsWith('/teacher') && role !== 'teacher') {
+      console.log('🚫 [Middleware] Kicking out of /teacher. Role is not teacher.')
       return NextResponse.redirect(new URL('/login', req.url))
     }
     if (pathname.startsWith('/student') && role !== 'student') {
+      console.log('🚫 [Middleware] Kicking out of /student. Role is not student.')
       return NextResponse.redirect(new URL('/login', req.url))
     }
 

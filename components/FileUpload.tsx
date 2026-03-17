@@ -15,7 +15,7 @@
 import { useRef, useState } from 'react'
 import { useUploadThing } from '@/lib/uploadthing'
 
-const ACCEPT_LABEL = 'PDF, DOCX, DOC, ODT, RTF, TXT, JPG, PNG, GIF'
+const ACCEPT_LABEL = 'PDF, DOCX, PPTX, XLSX, ODT, TXT, JPG, PNG'
 const MAX_MB = 16
 
 // All accepted MIME types
@@ -23,6 +23,10 @@ const ACCEPTED = [
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'application/vnd.oasis.opendocument.text',
   'application/rtf',
   'text/plain',
@@ -33,15 +37,17 @@ const ACCEPTED = [
 ].join(',')
 
 interface Props {
-  value:       string
-  onChange:    (url: string, originalName: string) => void
+  value:        string
+  onChange:     (url: string, originalName: string) => void
   accentColor?: string
+  inputId?:     string   // unique ID to avoid conflicts when multiple instances mount
 }
 
 export default function FileUpload({
   value,
   onChange,
   accentColor = '#d4a843',
+  inputId     = 'ut-file-input',
 }: Props) {
   const inputRef  = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -104,13 +110,13 @@ export default function FileUpload({
         accept={ACCEPTED}
         onChange={handleFile}
         className="hidden"
-        id="ut-file-input"
+        id={inputId}
       />
 
       {/* ── Upload zone ── */}
       {!hasFile ? (
         <label
-          htmlFor="ut-file-input"
+          htmlFor={inputId}
           className={`flex items-center gap-3 w-full px-4 py-3 border-2 border-dashed rounded-sm transition-all ${
             uploading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'
           }`}

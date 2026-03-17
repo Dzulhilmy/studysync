@@ -7,6 +7,7 @@ import {
   IconDraft, IconSubmitted, IconApproved, IconWarning,
   IconClose, IconTrash, IconSave, IconRefresh, IconCalendar, IconTrophy
 } from '@/components/NavIcons'
+import FileUpload from '@/components/FileUpload'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -303,6 +304,7 @@ export default function StudentProjectsPage() {
   const [formFileUrl,    setFormFileUrl]    = useState('')
   const [formText,       setFormText]       = useState('')
   const [submitting,     setSubmitting]     = useState(false)
+  const [savingDraft,    setSavingDraft]    = useState(false)
   const [error,          setError]          = useState('')
 
   async function load() {
@@ -334,24 +336,41 @@ export default function StudentProjectsPage() {
 
   async function handleSubmit(isDraft: boolean) {
     if (!activeProject) return
-    setError(''); setSubmitting(true)
-    const existing = activeProject.submission
-    const body = { projectId: activeProject._id, fileUrl: formFileUrl, textResponse: formText, isDraft }
-    let res: Response
-    if (existing) {
-      res = await fetch('/api/student/submissions', {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissionId: existing._id, ...body }),
-      })
-    } else {
-      res = await fetch('/api/student/submissions', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
+    setError('')
+    if (isDraft) setSavingDraft(true); else setSubmitting(true)
+    try {
+      const existing = activeProject.submission
+      const body = { projectId: activeProject._id, fileUrl: formFileUrl, textResponse: formText, isDraft }
+      let res: Response
+      if (existing) {
+        res = await fetch('/api/student/submissions', {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ submissionId: existing._id, ...body }),
+        })
+      } else {
+        res = await fetch('/api/student/submissions', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+      }
+
+      // Safely parse — server may return HTML on a 500 or an empty body
+      const contentType = res.headers.get('content-type') ?? ''
+      const data = contentType.includes('application/json') ? await res.json() : null
+
+      if (!res.ok) {
+        setError(data?.error ?? `Server error (${res.status}). Please try again.`)
+        return
+      }
+      setActiveProject(null); load()
+    } catch (err) {
+      // Only reaches here on a true network failure (offline, DNS, etc.)
+      console.error('[handleSubmit]', err)
+      setError('Could not reach the server. Please check your connection and try again.')
+    } finally {
+      setSavingDraft(false)
+      setSubmitting(false)
     }
-    const data = await res.json(); setSubmitting(false)
-    if (!res.ok) { setError(data.error); return }
-    setActiveProject(null); load()
   }
 
   async function handleDelete(submissionId: string) {
@@ -487,9 +506,29 @@ export default function StudentProjectsPage() {
                 </div>
               )}
 
+              {/* ── File upload ── */}
+              <div>
+                <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1.5">
+                  Attach File
+                </label>
+                <FileUpload
+                  value={formFileUrl}
+                  onChange={(url) => setFormFileUrl(url)}
+                  accentColor="#63b3ed"
+                  inputId="submission-file-upload"
+                />
+              </div>
+
+              {/* ── Divider ── */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-[#e8dfc8]" />
+                <span className="text-[10px] font-mono text-[#a89880] uppercase tracking-widest">or paste a link</span>
+                <div className="flex-1 h-px bg-[#e8dfc8]" />
+              </div>
+
               <div>
                 <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">
-                  File / Google Drive Link
+                  Google Drive / OneDrive Link
                 </label>
                 <input value={formFileUrl} onChange={e => setFormFileUrl(e.target.value)}
                   placeholder="https://drive.google.com/..."
@@ -517,12 +556,12 @@ export default function StudentProjectsPage() {
                 )}
                 <div className="flex gap-2 ml-auto">
                   {!activeProject.submission?.redoRequested && (
-                    <button onClick={() => handleSubmit(true)} disabled={submitting}
+                    <button onClick={() => handleSubmit(true)} disabled={savingDraft || submitting}
                       className="text-xs px-4 py-2 border border-[#c8b89a] text-[#7a6a52] hover:bg-[#faf6ee] rounded-sm disabled:opacity-50 transition-colors flex items-center gap-1">
-                      {submitting ? '…' : <><IconSave size={13} color="currentColor" /> Save Draft</>}
+                      {savingDraft ? 'Saving…' : <><IconSave size={13} color="currentColor" /> Save Draft</>}
                     </button>
                   )}
-                  <button onClick={() => handleSubmit(false)} disabled={submitting || (!formFileUrl && !formText)}
+                  <button onClick={() => handleSubmit(false)} disabled={submitting || savingDraft || (!formFileUrl && !formText)}
                     className="text-xs px-4 py-2 bg-[#1a2535] text-[#63b3ed] border border-[rgba(99,179,237,0.3)] rounded-sm hover:bg-[#243040] disabled:opacity-50 transition-colors font-semibold">
                     {submitting
                       ? 'Submitting…'

@@ -70,6 +70,10 @@ export async function GET(req: NextRequest) {
         textResponse: (sub as any).textResponse ?? '',
         submittedAt:  (sub as any).submittedAt ?? null,
         isLate:       (sub as any).isLate ?? false,
+        versions:      (sub as any).versions ?? [],
+        redoRequested: (sub as any).redoRequested ?? false,
+        redoReason:    (sub as any).redoReason ?? '',
+        messages:      (sub as any).messages ?? [],
       } : null,
     }
   })

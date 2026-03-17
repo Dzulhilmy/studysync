@@ -27,9 +27,6 @@ export async function PATCH(req: Request) {
     if (!isBase64 && !isHttpUrl) {
       return NextResponse.json({ error: 'avatarUrl must be a base64 data URI or a valid URL' }, { status: 400 })
     }
-    if (isBase64 && avatarUrl.length > 3_000_000) {
-      return NextResponse.json({ error: 'Image too large. Maximum size is 2 MB.' }, { status: 413 })
-    }
   }
 
   await dbConnect()
