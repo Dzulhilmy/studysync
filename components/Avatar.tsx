@@ -5,27 +5,27 @@ import { useState } from 'react'
 // ── Role colour config ────────────────────────────────────────────────────────
 const ROLE_CONFIG = {
   admin: {
-    bg:    '#1a3a2a',
-    ring:  'rgba(192,57,43,0.5)',
-    text:  '#d4a843',
+    bg: '#1a3a2a',
+    ring: 'rgba(192,57,43,0.5)',
+    text: '#d4a843',
     label: '#c0392b',
   },
   teacher: {
-    bg:    '#1a2535',
-    ring:  'rgba(99,179,237,0.5)',
-    text:  '#63b3ed',
-    label: '#63b3ed',
+    bg: '#1a3523ff',
+    ring: 'rgba(99, 237, 145, 0.5)',
+    text: '#1A7A6E',
+    label: '#1A7A6E',
   },
   student: {
-    bg:    '#2c1810',
-    ring:  'rgba(212,168,67,0.4)',
-    text:  '#d4a843',
-    label: '#d4a843',
+    bg: '#1a2535',
+    ring: 'rgba(99,179,237,0.5)',
+    text: '#63b3ed',
+    label: '#63b3ed',
   },
   default: {
-    bg:    '#2a2420',
-    ring:  'rgba(200,184,154,0.4)',
-    text:  '#c8b89a',
+    bg: '#2a2420',
+    ring: 'rgba(200,184,154,0.4)',
+    text: '#c8b89a',
     label: '#a89880',
   },
 }
@@ -53,26 +53,26 @@ function UserIcon({ size, color }: { size: number; color: string }) {
 
 interface AvatarProps {
   /** URL of the user's uploaded image (remote URL, blob:, data:, or relative path) */
-  src?:         string | null
+  src?: string | null
   /** User's display name — used to generate initials fallback */
-  name?:        string | null
+  name?: string | null
   /** Role controls ring colour and initial background */
-  role?:        'admin' | 'teacher' | 'student'
+  role?: 'admin' | 'teacher' | 'student'
   /** Diameter in px — default 40 */
-  size?:        number
+  size?: number
   /** Show a coloured role indicator dot */
   showRoleDot?: boolean
   /** Extra Tailwind classes on the outer wrapper */
-  className?:   string
+  className?: string
 }
 
 export default function Avatar({
   src,
   name,
-  role        = 'default' as any,
-  size        = 40,
+  role = 'default' as any,
+  size = 40,
   showRoleDot = false,
-  className   = '',
+  className = '',
 }: AvatarProps) {
   const [imgError, setImgError] = useState(false)
   const cfg = ROLE_CONFIG[role] ?? ROLE_CONFIG.default
@@ -80,15 +80,15 @@ export default function Avatar({
   // Derive initials from name
   const initials = name
     ? name
-        .split(' ')
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((w) => w[0].toUpperCase())
-        .join('')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0].toUpperCase())
+      .join('')
     : null
 
-  const fontSize  = Math.max(10, Math.round(size * 0.36))
-  const dotSize   = Math.max(8,  Math.round(size * 0.22))
+  const fontSize = Math.max(10, Math.round(size * 0.36))
+  const dotSize = Math.max(8, Math.round(size * 0.22))
   const ringWidth = size >= 48 ? 2 : 1.5
 
   // Use native <img> so blob:, data:, and any remote URL all work without
@@ -105,7 +105,7 @@ export default function Avatar({
         className="w-full h-full rounded-full overflow-hidden flex items-center justify-center"
         style={{
           background: showImage ? 'transparent' : cfg.bg,
-          boxShadow:  `0 0 0 ${ringWidth}px ${cfg.ring}, 2px 2px 0 rgba(0,0,0,0.25)`,
+          boxShadow: `0 0 0 ${ringWidth}px ${cfg.ring}, 2px 2px 0 rgba(0,0,0,0.25)`,
         }}
       >
         {showImage ? (
@@ -122,9 +122,9 @@ export default function Avatar({
           <span
             className="font-bold select-none leading-none"
             style={{
-              fontFamily:    'Georgia, serif',
-              fontSize:      fontSize,
-              color:         cfg.text,
+              fontFamily: 'Georgia, serif',
+              fontSize: fontSize,
+              color: cfg.text,
               letterSpacing: '0.03em',
             }}
           >
@@ -140,9 +140,9 @@ export default function Avatar({
         <span
           className="absolute bottom-0 right-0 rounded-full border-2"
           style={{
-            width:       dotSize,
-            height:      dotSize,
-            background:  cfg.label,
+            width: dotSize,
+            height: dotSize,
+            background: cfg.label,
             borderColor: '#faf6ee',
           }}
         />
