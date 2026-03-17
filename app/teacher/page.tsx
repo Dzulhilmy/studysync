@@ -11,6 +11,7 @@ import {
   IconRejected, IconAnnouncements, IconWarning,
   IconAdd, IconOpenBook, IconProgress,
 } from '@/components/NavIcons'
+import { getDaysLeft } from '@/lib/dateUtils'
 import { JSX } from 'react/jsx-runtime'
 
 interface Stats {
@@ -152,7 +153,7 @@ export default function TeacherDashboard() {
               <div>
                 <span className="text-sm font-semibold text-[#8b5a2b]">{p.title}</span>
                 <span className="text-sm text-[#7a6a52]"> — {p.unsubmitted} student{p.unsubmitted !== 1 ? 's' : ''} haven't submitted with </span>
-                <span className="text-sm font-bold text-[#c0392b]">{p.daysLeft} day{p.daysLeft !== 1 ? 's' : ''} left</span>
+                <span className="text-sm font-bold" style={{ color: getDaysLeft(p.deadline).color }}>{getDaysLeft(p.deadline).label}</span>
               </div>
             </div>
           ))}

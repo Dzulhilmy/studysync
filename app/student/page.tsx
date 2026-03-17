@@ -10,6 +10,7 @@ import {
   IconSubjects, IconSubmitted, IconApproved, IconDraft,
   IconWarning, IconEmpty,
 } from '@/components/NavIcons'
+import { getDaysLeft } from '@/lib/dateUtils'
 import { JSX } from 'react/jsx-runtime'
 
 interface Submission {
@@ -79,7 +80,7 @@ export default function StudentDashboard() {
     if (s.status === 'submitted' || s.status === 'graded') return false
     if (!s.project?.deadline) return false
     const daysLeft = Math.ceil((new Date(s.project.deadline).getTime() - Date.now()) / 86400000)
-    return daysLeft <= 5 && daysLeft >= 0
+    return daysLeft <= 5
   })
 
   const statCards = [
@@ -123,16 +124,16 @@ export default function StudentDashboard() {
       {warnings.length > 0 && (
         <div className="mb-6 space-y-2">
           {warnings.map((s) => {
-            const daysLeft = Math.ceil((new Date(s.project.deadline).getTime() - Date.now()) / 86400000)
+            const statusInfo = getDaysLeft(s.project.deadline)
             return (
-              <div key={s._id} className="flex items-start gap-3 bg-[rgba(212,168,67,0.08)] border border-[rgba(212,168,67,0.4)] rounded-sm px-4 py-3">
+              <div key={s._id} className="flex items-start gap-3 bg-[rgba(212,168,67,0.08)] border rounded-sm px-4 py-3" style={{ borderColor: statusInfo.color }}>
                 <div className="mt-0.5 flex-shrink-0">
-                  <IconWarning size={20} color="#d4a843" />
+                  <IconWarning size={20} color={statusInfo.color} />
                 </div>
                 <div>
-                  <span className="text-sm font-semibold text-[#8b5a2b]">{s.project.title}</span>
-                  <span className="text-sm text-[#7a6a52]"> is due in </span>
-                  <span className="text-sm font-bold text-[#c0392b]">{daysLeft} day{daysLeft !== 1 ? 's' : ''}</span>
+                  <span className="text-sm font-semibold text-[#1a1209]">{s.project.title}</span>
+                  <span className="text-sm text-[#7a6a52]"> is </span>
+                  <span className="text-sm font-bold" style={{ color: statusInfo.color }}>{statusInfo.label}</span>
                   <span className="text-sm text-[#7a6a52]"> and you haven't submitted yet!</span>
                   <Link href="/student/projects" className="ml-2 text-xs text-[#63b3ed] hover:underline font-semibold">
                     Submit now →

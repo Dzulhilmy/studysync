@@ -15,6 +15,7 @@
  */
 
 import nodemailer from 'nodemailer'
+import { getDaysLeft } from './dateUtils'
 
 // ── Transporter (singleton) ───────────────────────────────────────────────────
 
@@ -158,10 +159,7 @@ export interface NewProjectEmailData {
 }
 
 function buildNewProjectEmail(d: NewProjectEmailData): string {
-  const daysLeft = Math.ceil(
-    (new Date(d.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-  )
-  const urgency = daysLeft <= 3 ? '#c0392b' : daysLeft <= 7 ? '#d4a843' : '#1a7a6e'
+  const statusInfo = getDaysLeft(d.deadline)
 
   return baseLayout(`
     <p style="margin:0 0 4px;font-family:monospace;font-size:11px;
@@ -191,9 +189,9 @@ function buildNewProjectEmail(d: NewProjectEmailData): string {
     <table cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
       ${infoRow('📚', 'Subject',   `${d.subjectCode} — ${d.subjectName}`)}
       ${infoRow('🏆', 'Max Score', `${d.maxScore} pts`)}
-      ${infoRow('📅', 'Deadline',  `<span style="color:${urgency};font-weight:700;">
+      ${infoRow('📅', 'Deadline',  `<span style="color:${statusInfo.color};font-weight:700;">
         ${new Date(d.deadline).toLocaleDateString('en-MY', { day:'numeric', month:'long', year:'numeric' })}
-        &nbsp;·&nbsp; ${daysLeft > 0 ? daysLeft + ' days left' : 'Due today'}
+        &nbsp;·&nbsp; ${statusInfo.label}
       </span>`)}
     </table>
 
@@ -218,10 +216,7 @@ export interface InactivityReminderData {
 
 function buildInactivityEmail(d: InactivityReminderData): string {
   const rows = d.pendingProjects.slice(0, 5).map(p => {
-    const daysLeft = Math.ceil(
-      (new Date(p.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-    )
-    const color = daysLeft <= 3 ? '#c0392b' : daysLeft <= 7 ? '#d4a843' : '#7a6a52'
+    const statusInfo = getDaysLeft(p.deadline)
     return `
     <tr>
       <td style="padding:10px 12px;border-bottom:1px solid #f0e9d6;">
@@ -232,8 +227,8 @@ function buildInactivityEmail(d: InactivityReminderData): string {
       </td>
       <td style="padding:10px 12px;border-bottom:1px solid #f0e9d6;
                   text-align:right;white-space:nowrap;">
-        <span style="font-family:monospace;font-size:11px;font-weight:700;color:${color};">
-          ${daysLeft > 0 ? daysLeft + 'd left' : 'Due today'}
+        <span style="font-family:monospace;font-size:11px;font-weight:700;color:${statusInfo.color};">
+          ${statusInfo.label}
         </span>
       </td>
     </tr>`

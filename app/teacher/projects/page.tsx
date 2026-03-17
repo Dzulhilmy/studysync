@@ -3,12 +3,13 @@
 import { JSX, useEffect, useRef, useState } from 'react'
 import FileUpload from '@/components/FileUpload'
 import RealTimeClock from '@/components/RealTimeClock';
-import Link from 'next/link';
+import Link from 'next/link'
 import {
   IconAdd, IconClose, IconWarning, IconPending, IconApproved, IconRejected,
   IconCalendar, IconTrophy, IconSubmitted, IconRefresh, IconTrash, IconProjects,
   IconUsers, IconEye,
 } from '@/components/NavIcons'
+import { getDaysLeft } from '@/lib/dateUtils'
 
 interface Subject { _id: string; name: string; code: string }
 interface Project {
@@ -412,8 +413,9 @@ export default function TeacherProjectsPage() {
 
                 {/* Warning banner */}
                 {p.warnUnsubmitted && (
-                  <div className="flex items-center gap-2 mb-3 text-xs text-[#8b5a2b] bg-[rgba(212,168,67,0.08)] border border-[rgba(212,168,67,0.25)] px-3 py-1.5 rounded-sm">
-                    <IconWarning size={14} color="#8b5a2b" /> <strong>{p.unsubmitted} student{p.unsubmitted !== 1 ? 's' : ''}</strong> haven't submitted — only <strong>{p.daysLeft} day{p.daysLeft !== 1 ? 's' : ''}</strong> left!
+                  <div className="flex items-center gap-2 mb-3 text-xs bg-[rgba(212,168,67,0.08)] border border-[rgba(212,168,67,0.25)] px-3 py-1.5 rounded-sm" style={{ color: getDaysLeft(p.deadline).color }}>
+                    <IconWarning size={14} color={getDaysLeft(p.deadline).color} /> <strong className="text-[#8b5a2b]">{p.unsubmitted} student{p.unsubmitted !== 1 ? 's' : ''}</strong> <span className="text-[#8b5a2b]">haven't submitted — </span>
+                    <strong>{getDaysLeft(p.deadline).label}</strong>!
                   </div>
                 )}
 

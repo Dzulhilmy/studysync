@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import RealTimeClock from '@/components/RealTimeClock';
 import { IconDraft, IconSubmitted, IconApproved, IconTeacher } from '@/components/NavIcons'
+import { getDaysLeft } from '@/lib/dateUtils'
 
 interface Material {
   _id: string; title: string; type: string; url: string; topic: string
@@ -156,8 +157,7 @@ export default function StudentSubjectsPage() {
                     ) : selected.projects.map((p) => {
                       const subStatus = p.submission?.status ?? 'none'
                       const st        = SUBMIT_STATUS[subStatus] ?? SUBMIT_STATUS.none
-                      const daysLeft  = Math.ceil((new Date(p.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-                      const overdue   = daysLeft < 0
+                      const statusInfo = getDaysLeft(p.deadline)
 
                       return (
                         <div key={p._id}
@@ -168,12 +168,9 @@ export default function StudentSubjectsPage() {
                                 {p.title}
                               </h3>
                               {/* ── Meta row: deadline + max score only — grade intentionally hidden ── */}
-                              <div className="flex gap-3 mt-1 text-xs text-[#7a6a52] font-mono flex-wrap items-center">
-                                <span className={overdue && subStatus === 'none' ? 'text-[#c0392b] font-bold' : ''}>
-                                  📅 {overdue
-                                    ? `${Math.abs(daysLeft)}d ago`
-                                    : daysLeft === 0 ? 'Due today' : `${daysLeft}d left`
-                                  } · {new Date(p.deadline).toLocaleDateString()}
+                              <div className="flex gap-3 mt-1 text-xs font-mono flex-wrap items-center text-[#7a6a52]">
+                                <span style={{ color: subStatus === 'none' ? statusInfo.color : undefined }} className={subStatus === 'none' ? 'font-bold' : ''}>
+                                  📅 {statusInfo.label} · {new Date(p.deadline).toLocaleDateString()}
                                 </span>
                                 <span>🏆 {p.maxScore}pts max</span>
                               </div>

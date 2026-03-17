@@ -65,12 +65,7 @@ function gradeLabel(avg: number | null) {
   if (avg >= 60) return 'Good'
   return 'Needs help'
 }
-function daysLeft(deadline: string) {
-  const diff = Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000)
-  if (diff < 0)   return { label: `${Math.abs(diff)}d overdue`, color: '#c0392b' }
-  if (diff === 0) return { label: 'Due today', color: '#c0392b' }
-  return { label: `${diff}d left`, color: diff <= 7 ? '#d4a843' : '#7a6a52' }
-}
+import { getDaysLeft as daysLeft } from '@/lib/dateUtils'
 function fmt(iso: string | null) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })
