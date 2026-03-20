@@ -357,6 +357,8 @@ function GradingPanel({ student, subjectId, onClose, onSaved }: {
   const [redoReason, setRedoReason] = useState('')
   const [sendingRedo, setSendingRedo] = useState(false)
   const [belowThreshold, setBelowThreshold] = useState<Set<string>>(new Set())
+  // popup shown when teacher enters a grade above maxScore
+  const [gradeErrorPopup, setGradeErrorPopup] = useState<{ msg: string } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -380,11 +382,11 @@ function GradingPanel({ student, subjectId, onClose, onSaved }: {
 
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node) && !versionFor && !redoFor) onClose()
+      if (panelRef.current && !panelRef.current.contains(e.target as Node) && !versionFor && !redoFor && !gradeErrorPopup) onClose()
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [onClose, versionFor, redoFor])
+  }, [onClose, versionFor, redoFor, gradeErrorPopup])
 
   function setField(subId: string, field: 'grade' | 'feedback', value: string) {
     if (field === 'grade') setBelowThreshold(prev => { const n = new Set(prev); n.delete(subId); return n })
@@ -395,7 +397,9 @@ function GradingPanel({ student, subjectId, onClose, onSaved }: {
     const inp = inputs[subId]; if (!inp) return
     const gradeNum = Number(inp.grade)
     if (isNaN(gradeNum) || gradeNum < 0 || gradeNum > maxScore) {
-      setInputs(prev => ({ ...prev, [subId]: { ...prev[subId], error: `Grade must be 0–${maxScore}` } })); return
+      // Show popup for out-of-range grades
+      setGradeErrorPopup({ msg: `Grade must be between 0 and ${maxScore}.` })
+      return
     }
     setInputs(prev => ({ ...prev, [subId]: { ...prev[subId], saving: true, error: '' } }))
     try {
@@ -441,6 +445,27 @@ function GradingPanel({ student, subjectId, onClose, onSaved }: {
   return (
     <>
       <style>{`@keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
+
+      {/* ── Grade error popup ── */}
+      {gradeErrorPopup && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" onClick={() => setGradeErrorPopup(null)}>
+          <div className="bg-white border border-[#c8b89a] rounded-sm shadow-[6px_6px_0_#c8b89a] w-full max-w-xs"
+            onClick={e => e.stopPropagation()}>
+            <div className="bg-[#c0392b] px-4 py-3 flex items-center justify-between rounded-t-sm">
+              <span className="text-white text-xs font-mono font-bold uppercase tracking-wider">⚠ Invalid Grade</span>
+              <button onClick={() => setGradeErrorPopup(null)} className="text-white/60 hover:text-white transition-colors text-lg leading-none">×</button>
+            </div>
+            <div className="px-5 py-4">
+              <p className="text-sm text-[#1a1209] mb-4">{gradeErrorPopup.msg}</p>
+              <button onClick={() => setGradeErrorPopup(null)}
+                className="w-full py-2 text-xs font-mono font-semibold rounded-sm transition-colors"
+                style={{ background: '#1a3a2a', color: '#d4a843', border: '1px solid rgba(212,168,67,0.3)' }}>
+                OK, got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40" />
 
       {versionFor && <VersionsModal projectTitle={versionFor.project.title} submission={versionFor.submission} maxScore={versionFor.project.maxScore} onClose={() => setVersionFor(null)} />}
@@ -459,16 +484,19 @@ function GradingPanel({ student, subjectId, onClose, onSaved }: {
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">Reason / Instructions for student</label>
+                <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">Reason / Instructions for student <span className="text-[#c0392b]">*</span></label>
                 <textarea value={redoReason} onChange={e => setRedoReason(e.target.value)} rows={4}
                   placeholder="e.g. Please revise the analysis section…"
                   className="w-full border border-[#c8b89a] px-3 py-2 text-sm rounded-sm focus:outline-none focus:border-[#1a7a6e] resize-none"
                   style={{ color: '#1a1209' }} />
+                {!redoReason.trim() && (
+                  <p className="text-[11px] font-mono text-[#c0392b] mt-1">A reason is required before sending.</p>
+                )}
               </div>
               <div className="flex gap-2">
                 <button onClick={() => { setRedoFor(null); setRedoReason('') }}
                   className="flex-1 py-2 border border-[#c8b89a] text-xs text-[#7a6a52] hover:bg-[#faf6ee] rounded-sm font-mono">Cancel</button>
-                <button onClick={() => sendRedoRequest(redoFor)} disabled={sendingRedo}
+                <button onClick={() => sendRedoRequest(redoFor)} disabled={sendingRedo || !redoReason.trim()}
                   className="flex-1 py-2 text-xs font-semibold rounded-sm disabled:opacity-50 transition-colors"
                   style={{ background: '#1a3a2a', color: '#d4a843', border: '1px solid rgba(212,168,67,0.3)' }}>
                   {sendingRedo ? 'Sending…' : '🔄 Send Redo Request'}
@@ -570,7 +598,8 @@ function GradingPanel({ student, subjectId, onClose, onSaved }: {
                               {sub.submittedAt && <span className="text-[11px] font-mono text-[#7a6a52] flex items-center gap-1"><IconSubmitted size={11} color="#7a6a52" /> {fmt(sub.submittedAt)}</span>}
                             </div>
                             <VersionChips submission={sub} maxScore={row.project.maxScore} onOpenVersionsModal={() => setVersionFor(row)} />
-                            <ProjectMiniProgress submission={sub} maxScore={row.project.maxScore} />
+                            {/* Hide progress bar when redo is outstanding — student hasn't resubmitted yet */}
+                            {!sub.redoRequested && <ProjectMiniProgress submission={sub} maxScore={row.project.maxScore} />}
                           </div>
 
                           {(sub.textResponse || sub.fileUrl) && (
@@ -605,7 +634,14 @@ function GradingPanel({ student, subjectId, onClose, onSaved }: {
                               <div className="flex-1">
                                 <label className="text-[10px] font-mono text-[#7a6a52] block mb-1">Feedback (optional)</label>
                                 <textarea rows={3} value={inp.feedback} onChange={e => setField(sub._id, 'feedback', e.target.value)}
-                                  placeholder="Write your feedback here…"
+                                  onKeyDown={e => {
+                                    // Shift+Enter inserts a newline; plain Enter does nothing special in a textarea
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                      // Allow default — textarea adds newline on Enter anyway
+                                      // This handler exists so Shift+Enter is explicitly documented
+                                    }
+                                  }}
+                                  placeholder="Write your feedback here… (Shift+Enter for new line)"
                                   className="w-full border border-[#c8b89a] rounded-sm px-2.5 py-1.5 text-xs resize-none focus:outline-none focus:border-[#1a7a6e]" style={{ color: '#1a1209' }} />
                               </div>
                             </div>
@@ -724,7 +760,7 @@ export default function TeacherStudentsPage() {
   const [loading,         setLoading]         = useState(true)
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null)
   const [search,          setSearch]          = useState('')
-  const [statusFilter,    setStatusFilter]    = useState<'all' | 'submitted' | 'graded' | 'pending'>('all')
+  const [statusFilter,    setStatusFilter]    = useState<'all' | 'submitted' | 'graded' | 'pending' | 'redo'>('all')
   const [activeStudent,   setActiveStudent]   = useState<StudentProgress | null>(null)
 
   // Flat project cards shown on main page
@@ -805,8 +841,13 @@ export default function TeacherStudentsPage() {
     const st = card.submission?.status ?? 'pending'
     const matchStatus =
       statusFilter === 'all'       ? true :
-      statusFilter === 'submitted' ? (st === 'submitted' || !!card.submission?.redoRequested) :
-      statusFilter === 'graded'    ? st === 'graded' :
+      // 'redo' filter: redo has been requested and student hasn't resubmitted yet
+      // status stays 'graded' when teacher first requests redo — only becomes
+      // 'submitted' once the student actually resubmits
+      statusFilter === 'redo'      ? !!card.submission?.redoRequested && card.submission?.status !== 'submitted' :
+      // 'submitted' filter: fresh submissions OR student resubmitted after a redo
+      statusFilter === 'submitted' ? card.submission?.status === 'submitted' :
+      statusFilter === 'graded'    ? card.submission?.status === 'graded' && !card.submission?.redoRequested :
       // pending: no submission at all, OR status is pending/draft AND no redo pending
       !card.submission || (!card.submission.redoRequested && (st === 'pending' || st === 'draft'))
     return matchSearch && matchStatus
@@ -878,7 +919,7 @@ export default function TeacherStudentsPage() {
 
                 {/* Status filter pills */}
                 <div className="flex gap-1.5 flex-wrap">
-                  {(['all', 'submitted', 'graded', 'pending'] as const).map(f => (
+                  {(['all', 'submitted', 'graded', 'pending', 'redo'] as const).map(f => (
                     <button key={f} onClick={() => setStatusFilter(f)}
                       className={`px-3 py-1 text-[11px] font-mono rounded-sm border transition-all capitalize ${statusFilter === f ? 'bg-[#1a3a2a] text-[#d4a843] border-[rgba(212,168,67,0.4)]' : 'bg-white text-[#7a6a52] border-[#c8b89a] hover:border-[#1a7a6e]'}`}>
                       {f}
@@ -940,7 +981,7 @@ export default function TeacherStudentsPage() {
                                 {sub?.redoRequested && (
                                   <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-sm flex items-center gap-1"
                                     style={{ border: '1px solid rgba(212,168,67,0.4)', color: '#b8882a', background: 'rgba(212,168,67,0.06)' }}>
-                                    <IconRefresh size={10} color="currentColor" /> Redo
+                                    <IconRefresh size={10} color="currentColor" /> Awaiting Redo
                                   </span>
                                 )}
                                 {sub?.isLate && (
@@ -957,6 +998,7 @@ export default function TeacherStudentsPage() {
                                   }}>
                                   {!hasSubmission ? 'Pending'
                                     : sub?.redoRequested && (status === 'pending' || status === 'draft') ? <><IconRefresh size={10} color="currentColor" /> Awaiting Redo</>
+                                    : sub?.redoRequested && status === 'submitted' ? <><IconWarning size={10} color="currentColor" /> Awaiting Grade</>
                                     : status === 'graded' && isPassed ? <><IconApproved size={10} color="currentColor" /> Passed</>
                                     : status === 'graded' ? <><IconGrade size={10} color="currentColor" /> Graded</>
                                     : <><IconInbox size={10} color="currentColor" /> Submitted</>}
@@ -986,7 +1028,7 @@ export default function TeacherStudentsPage() {
                             )}
 
                             {/* Per-project progress */}
-                            {sub && <ProjectMiniProgress submission={sub} maxScore={card.project.maxScore} />}
+                            {sub && !sub.redoRequested && <ProjectMiniProgress submission={sub} maxScore={card.project.maxScore} />}
                           </div>
 
                           {/* Card footer */}
@@ -996,8 +1038,10 @@ export default function TeacherStudentsPage() {
                                 <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-sm border ${isPassed ? 'text-[#1a7a6e] bg-[rgba(26,122,110,0.08)] border-[rgba(26,122,110,0.25)]' : 'text-[#c0392b] bg-[rgba(192,57,43,0.06)] border-[rgba(192,57,43,0.25)]'}`}>
                                   {sub.grade}/{card.project.maxScore} · {Math.round((sub.grade / card.project.maxScore) * 100)}%{isPassed ? ' ✓' : ' ✗'}
                                 </span>
-                              ) : sub?.redoRequested ? (
+                              ) : sub?.redoRequested && (sub.status === 'pending' || sub.status === 'draft') ? (
                                 <span className="text-[11px] font-mono text-[#b8882a] flex items-center gap-1"><IconRefresh size={11} color="#b8882a" /> Awaiting resubmission</span>
+                              ) : sub?.redoRequested && sub.status === 'submitted' ? (
+                                <span className="text-[11px] font-mono text-[#b8882a] flex items-center gap-1"><IconWarning size={11} color="#b8882a" /> Awaiting grade</span>
                               ) : hasSubmission ? (
                                 <span className="text-[11px] font-mono text-[#b8882a] flex items-center gap-1"><IconWarning size={11} color="#b8882a" /> Awaiting grade</span>
                               ) : (

@@ -2,7 +2,7 @@
 
 import { JSX, useEffect, useRef, useState } from 'react'
 import FileUpload from '@/components/FileUpload'
-import RealTimeClock from '@/components/RealTimeClock';
+import RealTimeClock from '@/components/RealTimeClock'
 import Link from 'next/link'
 import {
   IconAdd, IconClose, IconWarning, IconPending, IconApproved, IconRejected,
@@ -10,6 +10,15 @@ import {
   IconUsers, IconEye,
 } from '@/components/NavIcons'
 import { getDaysLeft } from '@/lib/dateUtils'
+
+// ── Safe JSON helper ──────────────────────────────────────────────────────────
+// Prevents "Unexpected end of JSON input" when the server returns an empty
+// body (e.g. 204 No Content, 304, or a network error with no payload).
+async function safeJson<T = any>(res: Response): Promise<T | null> {
+  const text = await res.text().catch(() => '')
+  if (!text.trim()) return null
+  try { return JSON.parse(text) as T } catch { return null }
+}
 
 interface Subject { _id: string; name: string; code: string }
 interface Project {
@@ -51,18 +60,24 @@ function SubmissionMonitorModal({ project, onClose }: { project: Project; onClos
 
   useEffect(() => {
     fetch(`/api/teacher/projects/${project._id}/submissions`)
-      .then(r => r.json()).then(d => setSubs(Array.isArray(d) ? d : []))
-      .catch(() => setSubs([])).finally(() => setLoading(false))
+      .then(r => safeJson<StudentSubmission[]>(r))
+      .then(d => setSubs(Array.isArray(d) ? d : []))
+      .catch(() => setSubs([]))
+      .finally(() => setLoading(false))
   }, [project._id])
 
   async function handleReview(subId: string, decision: 'approved' | 'rejected') {
     setSaving(subId)
-    await fetch(`/api/teacher/submissions/${subId}/review`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ decision, note: noteMap[subId] ?? '' }),
-    })
-    setSubs(p => p.map(s => s._id === subId ? { ...s, reviewStatus: decision } : s))
-    setReviewingId(null); setSaving(null)
+    try {
+      const res = await fetch(`/api/teacher/submissions/${subId}/review`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decision, note: noteMap[subId] ?? '' }),
+      })
+      if (res.ok) {
+        setSubs(p => p.map(s => s._id === subId ? { ...s, reviewStatus: decision } : s))
+        setReviewingId(null)
+      }
+    } finally { setSaving(null) }
   }
 
   const submitted    = subs.filter(s => s.submittedAt)
@@ -141,7 +156,6 @@ function SubmissionMonitorModal({ project, onClose }: { project: Project; onClos
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-                  {/* Submission status */}
                   {!s.submittedAt ? (
                     <span className="text-[10px] font-mono px-2 py-0.5 border rounded-sm text-[#c0392b] bg-[rgba(192,57,43,0.06)] border-[rgba(192,57,43,0.2)]">Not submitted</span>
                   ) : (
@@ -149,16 +163,12 @@ function SubmissionMonitorModal({ project, onClose }: { project: Project; onClos
                       {s.isLate ? 'Late' : 'On time'}
                     </span>
                   )}
-
-                  {/* Review status badge */}
                   {s.reviewStatus && (
                     <span className={`text-[10px] font-mono px-2 py-0.5 border rounded-sm flex items-center gap-1 capitalize ${REVIEW_COLOR[s.reviewStatus]}`}>
                       {s.reviewStatus === 'approved' ? <IconApproved size={10} color="currentColor" /> : <IconRejected size={10} color="currentColor" />}
                       {s.reviewStatus}
                     </span>
                   )}
-
-                  {/* Approve / Reject */}
                   {s.submittedAt && !s.reviewStatus && (
                     reviewingId === s._id ? (
                       <div className="flex items-center gap-1">
@@ -187,8 +197,6 @@ function SubmissionMonitorModal({ project, onClose }: { project: Project; onClos
                   )}
                 </div>
               </div>
-
-              {/* Note input when reviewing */}
               {reviewingId === s._id && (
                 <div className="mt-2">
                   <input value={noteMap[s._id] ?? ''} onChange={e => setNoteMap(p => ({ ...p, [s._id]: e.target.value }))}
@@ -209,20 +217,60 @@ function SubmissionMonitorModal({ project, onClose }: { project: Project; onClos
   )
 }
 
+// ── Delete Confirm Popup ──────────────────────────────────────────────────────
+function DeleteConfirmPopup({
+  project, onConfirm, onCancel, deleting,
+}: {
+  project: Project; onConfirm: () => void; onCancel: () => void; deleting: boolean
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+      onClick={() => !deleting && onCancel()}>
+      <div className="bg-white border border-[#c8b89a] rounded-sm shadow-[6px_6px_0_#c8b89a] w-full max-w-sm overflow-hidden"
+        onClick={e => e.stopPropagation()}>
+        <div className="bg-[#c0392b] px-5 py-4 flex items-center justify-between">
+          <span className="text-white text-xs font-mono font-bold uppercase tracking-wider">⚠ Delete Project</span>
+          <button onClick={() => !deleting && onCancel()} className="text-white/60 hover:text-white text-lg leading-none">×</button>
+        </div>
+        <div className="p-6">
+          <p className="text-sm text-[#1a1209] mb-1">
+            Delete <span className="font-bold">"{project.title}"</span>?
+          </p>
+          <p className="text-xs text-[#7a6a52] font-mono mb-4">{project.subject?.code} · {project.subject?.name}</p>
+          <p className="text-xs text-[#c0392b] bg-[rgba(192,57,43,0.06)] border border-[rgba(192,57,43,0.2)] px-3 py-2 rounded-sm mb-5">
+            This cannot be undone. All associated submissions will also be removed.
+          </p>
+          <div className="flex gap-3">
+            <button onClick={onCancel} disabled={deleting}
+              className="flex-1 py-2 border border-[#c8b89a] text-sm text-[#7a6a52] hover:bg-[#faf6ee] rounded-sm font-mono transition-colors disabled:opacity-50">
+              Cancel
+            </button>
+            <button onClick={onConfirm} disabled={deleting}
+              className="flex-1 py-2 text-sm font-semibold rounded-sm transition-colors disabled:opacity-50"
+              style={{ background: '#c0392b', color: '#fff', border: '1px solid rgba(192,57,43,0.4)' }}>
+              {deleting ? 'Deleting…' : 'Yes, Delete'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function TeacherProjectsPage() {
-  const [projects,       setProjects]      = useState<Project[]>([])
-  const [subjects,       setSubjects]      = useState<Subject[]>([])
-  const [loading,        setLoading]       = useState(true)
-  const [filter,         setFilter]        = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
-  const [showForm,       setShowForm]      = useState(false)
-  const [editProject,    setEditProject]   = useState<Project | null>(null)
-  const [form,           setForm]          = useState(EMPTY)
-  const [submitting,     setSubmitting]    = useState(false)
-  const [error,          setError]         = useState('')
-  const [deletingId,     setDeletingId]    = useState<string | null>(null)
-  const [monitorProject, setMonitorProject]= useState<Project | null>(null)
-  const deleteRef = useRef(false)
+  const [projects,       setProjects]       = useState<Project[]>([])
+  const [subjects,       setSubjects]       = useState<Subject[]>([])
+  const [loading,        setLoading]        = useState(true)
+  const [filter,         setFilter]         = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
+  const [showForm,       setShowForm]       = useState(false)
+  const [editProject,    setEditProject]    = useState<Project | null>(null)
+  const [form,           setForm]           = useState(EMPTY)
+  const [submitting,     setSubmitting]     = useState(false)
+  const [error,          setError]          = useState('')
+  const [deleteTarget,   setDeleteTarget]   = useState<Project | null>(null)
+  const [deleting,       setDeleting]       = useState(false)
+  const [monitorProject, setMonitorProject] = useState<Project | null>(null)
 
   async function load() {
     try {
@@ -230,11 +278,12 @@ export default function TeacherProjectsPage() {
         fetch('/api/teacher/projects'),
         fetch('/api/teacher/subjects'),
       ])
-      const pData = await pRes.json()
-      const sData = await sRes.json()
+      // Use safeJson so empty or non-JSON responses don't crash the page
+      const pData = await safeJson<Project[]>(pRes)
+      const sData = await safeJson<Subject[]>(sRes)
       setProjects(Array.isArray(pData) ? pData : [])
       setSubjects(Array.isArray(sData) ? sData : [])
-    } catch (e) {
+    } catch {
       setProjects([]); setSubjects([])
     } finally { setLoading(false) }
   }
@@ -246,39 +295,56 @@ export default function TeacherProjectsPage() {
   function openEdit(p: Project) {
     setEditProject(p)
     setForm({
-      title: p.title, description: p.description,
-      subject: p.subject?._id, maxScore: p.maxScore,
-      deadline: p.deadline ? p.deadline.slice(0, 10) : '',
-      fileUrl: p.fileUrl ?? '', fileName: p.fileName ?? '',
+      title:       p.title,
+      description: p.description,
+      subject:     p.subject?._id ?? '',
+      maxScore:    p.maxScore,
+      deadline:    p.deadline ? p.deadline.slice(0, 10) : '',
+      fileUrl:     p.fileUrl  ?? '',
+      fileName:    p.fileName ?? '',
     })
     setError(''); setShowForm(true)
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setError(''); setSubmitting(true)
-    const url = editProject ? `/api/teacher/projects/${editProject._id}` : '/api/teacher/projects'
+    const url    = editProject ? `/api/teacher/projects/${editProject._id}` : '/api/teacher/projects'
     const method = editProject ? 'PATCH' : 'POST'
-    const res = await fetch(url, {
-      method, headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, fileUrl: form.fileUrl || null, fileName: form.fileName || null }),
-    })
-    const data = await res.json(); setSubmitting(false)
-    if (!res.ok) { setError(data.error); return }
-    setShowForm(false); load()
+    try {
+      const res  = await fetch(url, {
+        method, headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, fileUrl: form.fileUrl || null, fileName: form.fileName || null }),
+      })
+      const data = await safeJson(res)
+      if (!res.ok) {
+        setError(data?.error ?? `Request failed (${res.status})`)
+        return
+      }
+      setShowForm(false); load()
+    } catch {
+      setError('Network error — please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  async function deleteProject(id: string) {
-    if (!confirm('Delete this project?')) return
-    if (deleteRef.current) return
-    deleteRef.current = true; setDeletingId(id)
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
     try {
-      const res = await fetch(`/api/teacher/projects/${id}`, { method: 'DELETE' })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        setError(data.error ?? `Delete failed (${res.status})`)
-      } else { setProjects(prev => prev.filter(p => p._id !== id)) }
-    } catch { setError('Network error — please try again.') }
-    finally { setDeletingId(null); deleteRef.current = false }
+      const res = await fetch(`/api/teacher/projects/${deleteTarget._id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setProjects(prev => prev.filter(p => p._id !== deleteTarget._id))
+      } else {
+        const data = await safeJson(res)
+        setError(data?.error ?? `Delete failed (${res.status})`)
+      }
+    } catch {
+      setError('Network error — please try again.')
+    } finally {
+      setDeleting(false)
+      setDeleteTarget(null)
+    }
   }
 
   const filtered = projects.filter(p => filter === 'all' || p.status === filter)
@@ -291,7 +357,6 @@ export default function TeacherProjectsPage() {
 
   return (
     <div>
-      {/* Back */}
       <Link href="/teacher" suppressHydrationWarning
         className="inline-flex items-center gap-2 text-xs font-mono text-[#4a3828] hover:text-[#1a7a6e] mb-6 group transition-colors">
         <span suppressHydrationWarning className="text-base leading-none group-hover:-translate-x-1 transition-transform">←</span>
@@ -300,7 +365,6 @@ export default function TeacherProjectsPage() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          
           <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>Project Management</h1>
         </div>
         <RealTimeClock accentColor="#1a7a6e" />
@@ -322,6 +386,14 @@ export default function TeacherProjectsPage() {
         ))}
       </div>
 
+      {/* Global error banner */}
+      {error && (
+        <div className="mb-4 text-[#c0392b] text-xs bg-[rgba(192,57,43,0.08)] border border-[rgba(192,57,43,0.2)] px-3 py-2 rounded-sm flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="ml-3 text-[#c0392b] hover:opacity-60 text-base leading-none">×</button>
+        </div>
+      )}
+
       {/* Create / Edit modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -335,20 +407,20 @@ export default function TeacherProjectsPage() {
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {error && <div className="text-[#c0392b] text-xs bg-[rgba(192,57,43,0.08)] border border-[rgba(192,57,43,0.2)] px-3 py-2 rounded-sm">{error}</div>}
+              {error && (
+                <div className="text-[#c0392b] text-xs bg-[rgba(192,57,43,0.08)] border border-[rgba(192,57,43,0.2)] px-3 py-2 rounded-sm">{error}</div>
+              )}
               {editProject?.status === 'rejected' && editProject.adminNote && (
                 <div className="text-[#8b5a2b] text-xs bg-[rgba(212,168,67,0.08)] border border-[rgba(212,168,67,0.25)] px-3 py-2 rounded-sm">
                   <strong>Admin note:</strong> {editProject.adminNote}
                 </div>
               )}
-              {[{ label: 'Project Title', key: 'title', type: 'text', placeholder: 'e.g. Science Fair Report' }].map(f => (
-                <div key={f.key}>
-                  <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">{f.label}</label>
-                  <input type={f.type} placeholder={f.placeholder} value={(form as any)[f.key]}
-                    onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} required
-                    className="w-full border border-[#c8b89a] px-3 py-2 text-sm rounded-sm focus:outline-none focus:border-[#1a7a6e]" />
-                </div>
-              ))}
+              <div>
+                <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">Project Title</label>
+                <input type="text" placeholder="e.g. Science Fair Report" value={form.title}
+                  onChange={e => setForm(p => ({ ...p, title: e.target.value }))} required
+                  className="w-full border border-[#c8b89a] px-3 py-2 text-sm rounded-sm focus:outline-none focus:border-[#1a7a6e]" />
+              </div>
               <div>
                 <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">Description</label>
                 <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
@@ -380,9 +452,11 @@ export default function TeacherProjectsPage() {
                 <FileUpload value={form.fileUrl ?? ''} onChange={(url, name) => setForm(p => ({ ...p, fileUrl: url, fileName: name }))} accentColor="#1a7a6e" />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 border border-[#c8b89a] text-sm text-[#7a6a52] hover:bg-[#faf6ee] rounded-sm">Cancel</button>
-                <button type="submit" disabled={submitting} className="flex-1 py-2 bg-[#1a3a2a] text-[#d4a843] text-sm font-semibold rounded-sm disabled:opacity-50">
-                  {submitting ? 'Saving...' : editProject ? 'Resubmit' : 'Create & Submit'}
+                <button type="button" onClick={() => setShowForm(false)}
+                  className="flex-1 py-2 border border-[#c8b89a] text-sm text-[#7a6a52] hover:bg-[#faf6ee] rounded-sm">Cancel</button>
+                <button type="submit" disabled={submitting}
+                  className="flex-1 py-2 bg-[#1a3a2a] text-[#d4a843] text-sm font-semibold rounded-sm disabled:opacity-50">
+                  {submitting ? 'Saving…' : editProject ? 'Resubmit' : 'Create & Submit'}
                 </button>
               </div>
             </form>
@@ -390,12 +464,22 @@ export default function TeacherProjectsPage() {
         </div>
       )}
 
+      {/* Delete confirm popup */}
+      {deleteTarget && (
+        <DeleteConfirmPopup
+          project={deleteTarget}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteTarget(null)}
+          deleting={deleting}
+        />
+      )}
+
       {/* Submission monitor modal */}
       {monitorProject && <SubmissionMonitorModal project={monitorProject} onClose={() => setMonitorProject(null)} />}
 
       {/* Projects */}
       {loading ? (
-        <div className="text-[#7a6a52] text-sm font-mono animate-pulse">Loading projects...</div>
+        <div className="text-[#7a6a52] text-sm font-mono animate-pulse">Loading projects…</div>
       ) : filtered.length === 0 ? (
         <div className="bg-white border border-[#c8b89a] rounded-sm p-12 text-center shadow-[3px_3px_0_#c8b89a]">
           <div className="text-4xl mb-3"><IconProjects size={40} color="#c8b89a" /></div>
@@ -411,10 +495,12 @@ export default function TeacherProjectsPage() {
               <div key={p._id} className={`bg-white border rounded-sm p-5 shadow-[3px_3px_0_#c8b89a] transition-all ${
                 p.warnUnsubmitted ? 'border-[rgba(212,168,67,0.5)]' : 'border-[#c8b89a]'}`}>
 
-                {/* Warning banner */}
                 {p.warnUnsubmitted && (
-                  <div className="flex items-center gap-2 mb-3 text-xs bg-[rgba(212,168,67,0.08)] border border-[rgba(212,168,67,0.25)] px-3 py-1.5 rounded-sm" style={{ color: getDaysLeft(p.deadline).color }}>
-                    <IconWarning size={14} color={getDaysLeft(p.deadline).color} /> <strong className="text-[#8b5a2b]">{p.unsubmitted} student{p.unsubmitted !== 1 ? 's' : ''}</strong> <span className="text-[#8b5a2b]">haven't submitted — </span>
+                  <div className="flex items-center gap-2 mb-3 text-xs bg-[rgba(212,168,67,0.08)] border border-[rgba(212,168,67,0.25)] px-3 py-1.5 rounded-sm"
+                    style={{ color: getDaysLeft(p.deadline).color }}>
+                    <IconWarning size={14} color={getDaysLeft(p.deadline).color} />
+                    <strong className="text-[#8b5a2b]">{p.unsubmitted} student{p.unsubmitted !== 1 ? 's' : ''}</strong>
+                    <span className="text-[#8b5a2b]"> haven't submitted — </span>
                     <strong>{getDaysLeft(p.deadline).label}</strong>!
                   </div>
                 )}
@@ -422,8 +508,9 @@ export default function TeacherProjectsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                      <span className={`text-xs font-mono px-2 py-0.5 border rounded-sm capitalize ${STATUS_STYLE[p.status]}`}>
-                        {STATUS_ICON_COMP[p.status] && (() => { const IC = STATUS_ICON_COMP[p.status]; return <IC size={12} color="currentColor" /> })()} {p.status}
+                      <span className={`text-xs font-mono px-2 py-0.5 border rounded-sm capitalize flex items-center gap-1 ${STATUS_STYLE[p.status]}`}>
+                        {STATUS_ICON_COMP[p.status] && (() => { const IC = STATUS_ICON_COMP[p.status]; return <IC size={12} color="currentColor" /> })()}
+                        {p.status}
                       </span>
                       <span className="text-xs font-mono text-[#c0392b] bg-[rgba(192,57,43,0.06)] border border-[rgba(192,57,43,0.2)] px-2 py-0.5 rounded-sm">
                         {p.subject?.code}
@@ -437,13 +524,12 @@ export default function TeacherProjectsPage() {
                       </p>
                     )}
                     <div className="flex flex-wrap gap-3 mt-2 text-xs text-[#7a6a52] font-mono">
-                      <span><IconCalendar size={12} color='#7a6a52' /> {new Date(p.deadline).toLocaleDateString()}</span>
-                      <span><IconTrophy size={12} color='#7a6a52' /> Max {p.maxScore}pts</span>
-                      <span><IconSubmitted size={12} color='#7a6a52' /> {p.submitted}/{p.totalStudents} submitted</span>
-                      <span><IconRefresh size={12} color='#7a6a52' /> {p.graded} graded</span>
+                      <span className="flex items-center gap-1"><IconCalendar size={12} color="#7a6a52" /> {new Date(p.deadline).toLocaleDateString()}</span>
+                      <span className="flex items-center gap-1"><IconTrophy size={12} color="#7a6a52" /> Max {p.maxScore}pts</span>
+                      <span className="flex items-center gap-1"><IconSubmitted size={12} color="#7a6a52" /> {p.submitted}/{p.totalStudents} submitted</span>
+                      <span className="flex items-center gap-1"><IconRefresh size={12} color="#7a6a52" /> {p.graded} graded</span>
                     </div>
 
-                    {/* Submission progress bar */}
                     {p.totalStudents > 0 && (
                       <div className="mt-2">
                         <div className="h-1.5 bg-[#f0e9d6] rounded-full overflow-hidden w-full max-w-xs">
@@ -456,7 +542,6 @@ export default function TeacherProjectsPage() {
                       </div>
                     )}
 
-                    {/* Student submission breakdown — approved projects only */}
                     {p.status === 'approved' && p.totalStudents > 0 && (
                       <div className="mt-3 p-3 bg-[#faf6ee] border border-[#e8dfc8] rounded-sm">
                         <div className="flex items-center gap-4 mb-2 flex-wrap text-xs font-mono">
@@ -474,22 +559,23 @@ export default function TeacherProjectsPage() {
                   </div>
 
                   <div className="flex gap-2 shrink-0 flex-wrap">
-                    {/* View submissions button — approved projects with submissions */}
                     {p.status === 'approved' && p.submitted > 0 && (
                       <button onClick={() => setMonitorProject(p)}
                         className="text-xs px-3 py-1.5 bg-[#1a3a2a] text-[#d4a843] border border-[rgba(212,168,67,0.3)] hover:bg-[#224d38] rounded-sm transition-colors flex items-center gap-1.5">
-                        <IconUsers size={12} color="currentColor" />Submissions
+                        <IconUsers size={12} color="currentColor" /> Submissions
                       </button>
                     )}
                     {(p.status === 'rejected' || p.status === 'pending') && (
                       <button onClick={() => openEdit(p)}
-                        className="text-xs px-3 py-1.5 border border-[#c8b89a] hover:bg-[#f0e9d6] rounded-sm text-[#7a6a52] transition-colors">
+                        className="text-xs px-3 py-1.5 border border-[#c8b89a] hover:bg-[#f0e9d6] rounded-sm text-[#7a6a52] transition-colors flex items-center gap-1">
                         {p.status === 'rejected' ? <><IconRefresh size={12} color="currentColor" /> Resubmit</> : 'Edit'}
                       </button>
                     )}
-                    <button onClick={() => deleteProject(p._id)} disabled={!!deletingId}
+                    <button
+                      onClick={() => setDeleteTarget(p)}
+                      disabled={deleting}
                       className="text-xs px-3 py-1.5 border border-[rgba(192,57,43,0.3)] hover:bg-[rgba(192,57,43,0.08)] rounded-sm text-[#c0392b] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                      {deletingId === p._id ? 'Deleting…' : 'Delete'}
+                      Delete
                     </button>
                   </div>
                 </div>

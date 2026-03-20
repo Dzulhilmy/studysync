@@ -1,32 +1,15 @@
 /**
- * createNotification — server-side utility
- *
- * Call this inside any API route after an action to fire a notification.
- *
- * Usage:
- *   import { createNotification, createBulkNotifications } from '@/lib/notifications'
- *
- *   // Single recipient
- *   await createNotification({
- *     recipient: userId,
- *     type: 'project_approved',
- *     title: 'Project Approved!',
- *     message: 'Your project "Math Quiz" has been approved.',
- *     link: '/teacher/projects',
- *   })
- *
- *   // Multiple recipients at once
- *   await createBulkNotifications(studentIds, {
- *     type: 'project_published',
- *     title: 'New Project Available',
- *     message: 'A new project has been published for your subject.',
- *     link: '/student/projects',
- *   })
+ * lib/notifications.ts
+ * Server-side notification utility. Call from any API route.
+ * Never throws — notification failure never breaks the main action.
  */
 
-import connectDB from '@/lib/db'
-import Notification from '@/models/Notification'
+import connectDB        from '@/lib/db'
+import Notification     from '@/models/Notification'
+import User             from '@/models/User'
 import type { NotifType } from '@/models/Notification'
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface NotifPayload {
   recipient: string
@@ -36,15 +19,18 @@ interface NotifPayload {
   link:      string
 }
 
+// ── Single notification ───────────────────────────────────────────────────────
+
 export async function createNotification(payload: NotifPayload) {
   try {
     await connectDB()
     await Notification.create(payload)
   } catch (err) {
-    // Never throw — notification failure should never break the main action
     console.error('[createNotification] failed:', err)
   }
 }
+
+// ── Bulk notifications (e.g. all enrolled students) ───────────────────────────
 
 export async function createBulkNotifications(
   recipientIds: string[],
@@ -58,5 +44,22 @@ export async function createBulkNotifications(
     )
   } catch (err) {
     console.error('[createBulkNotifications] failed:', err)
+  }
+}
+
+// ── Notify all active admins ──────────────────────────────────────────────────
+// Used for: project approval requests, profile changes, new reports.
+// Automatically finds all admin accounts so callers don't need to hardcode IDs.
+
+export async function notifyAdmins(payload: Omit<NotifPayload, 'recipient'>) {
+  try {
+    await connectDB()
+    const admins = await User.find({ role: 'admin', isActive: true }).select('_id').lean() as { _id: any }[]
+    if (!admins.length) return
+    await Notification.insertMany(
+      admins.map(a => ({ ...payload, recipient: a._id.toString() }))
+    )
+  } catch (err) {
+    console.error('[notifyAdmins] failed:', err)
   }
 }

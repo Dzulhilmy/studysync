@@ -1,40 +1,45 @@
 import { Schema, model, models, Document } from 'mongoose'
 
+// ── All notification types ────────────────────────────────────────────────────
+// Student-facing
 export type NotifType =
-  | 'project_approved'    // admin approved teacher's project → notify teacher
-  | 'project_rejected'    // admin rejected teacher's project → notify teacher
-  | 'project_published'   // project approved → notify enrolled students
-  | 'submission_received' // student submitted → notify teacher
-  | 'submission_graded'   // teacher graded → notify student
-  | 'deadline_warning'    // 5 days left + not submitted → notify student
-  | 'announcement_posted' // new announcement → notify relevant students
-  | 'redo_requested'      // teacher requested redo → notify student
-  | 'new_message'         // new message in submission thread → notify other party
+  | 'submission_graded'        // teacher graded your submission
+  | 'redo_requested'           // teacher asked for revision
+  | 'new_message'              // new chat message on a submission
+  | 'project_published'        // new project available in your subject
+  // Teacher-facing
+  | 'new_submission'           // a student submitted work for grading
+  | 'project_approved'         // admin approved your project
+  | 'project_rejected'         // admin rejected your project
+  // Admin-facing
+  | 'project_pending_approval' // teacher created a project, awaiting admin review
+  | 'profile_updated'          // a user changed their profile details
+  | 'new_report'               // a new performance report is available
 
-export interface INotification extends Document {
-  recipient:  Schema.Types.ObjectId  // who receives this
-  type:       NotifType
-  title:      string
-  message:    string
-  link:       string                 // redirect URL when clicked
-  isRead:     boolean
-  createdAt:  Date
+// ── Schema ────────────────────────────────────────────────────────────────────
+interface INotification extends Document {
+  recipient: Schema.Types.ObjectId
+  type:      NotifType
+  title:     string
+  message:   string
+  link:      string
+  read:      boolean
+  createdAt: Date
 }
 
 const NotificationSchema = new Schema<INotification>(
   {
-    recipient: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    recipient: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     type:      { type: String, required: true },
     title:     { type: String, required: true },
     message:   { type: String, required: true },
-    link:      { type: String, required: true },
-    isRead:    { type: Boolean, default: false },
+    link:      { type: String, default: '/' },
+    read:      { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: { createdAt: true, updatedAt: false } }
 )
 
-// Index for fast per-user queries
-NotificationSchema.index({ recipient: 1, isRead: 1, createdAt: -1 })
+// Index for fast unread count queries
+NotificationSchema.index({ recipient: 1, read: 1 })
 
-const Notification = models.Notification || model<INotification>('Notification', NotificationSchema)
-export default Notification
+export default models.Notification ?? model<INotification>('Notification', NotificationSchema)

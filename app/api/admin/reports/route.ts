@@ -1,164 +1,139 @@
 /**
  * FILE: app/api/admin/reports/route.ts
  *
- * WHAT CHANGED:
- * - When returning reports, each project inside subjects[] now gets a
- *   students[] array built from live Submission data.
- * - This avoids any schema migration — nothing in the Report model changes.
- * - All the extra DB work is batched: one Submission query per report, not
- *   one per project.
+ * GET  /api/admin/reports          → list all generated reports
+ * POST /api/admin/reports/generate → generate a new performance report snapshot
  *
- * ASSUMPTIONS (rename if your models/fields differ):
- *   Model          → assumed import path
- *   ──────────────────────────────────────────────
- *   Submission     → @/models/Submission
- *   User           → @/models/User
- *   Subject        → @/models/Subject
+ * On generate: notifies all admins in-app that a new report is ready.
  *
- *   Submission fields assumed:
- *     .student     ObjectId  ref User
- *     .project     ObjectId  ref Project
- *     .status      string    'draft' | 'submitted' | 'graded'
- *     .isLate      boolean
- *     .submittedAt Date | null
- *     .createdAt   Date      (fallback timestamp)
- *
- *   Subject fields assumed:
- *     .students[]  ObjectId[]  ref User   (enrolled students)
- *     OR
- *     .enrollments[]  ObjectId[]  ref User
+ * The report aggregates:
+ *   - Per-subject submission rates
+ *   - Per-class average grades
+ *   - Number of students below the 85% pass threshold
+ *   - Pending (ungraded) submissions count
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession }          from 'next-auth'
 import { authOptions }               from '@/lib/auth'
 import connectDB                     from '@/lib/db'
-import Report                        from '@/models/Report'
-import Submission                    from '@/models/Submission'   // ← ADD
-import Subject                       from '@/models/Subject'      // ← ADD
-import User                          from '@/models/User'         // ← ADD (only if needed for name/email)
+import Subject                       from '@/models/Subject'
+import Project                       from '@/models/Project'
+import Submission                    from '@/models/Submission'
+import User                          from '@/models/User'
+import { notifyAdmins }              from '@/lib/notifications'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+const PASS_THRESHOLD = 0.85
 
-interface StudentRow {
-  name:        string
-  email:       string
-  didSubmit:   boolean
-  isLate:      boolean
-  submittedAt: string | null
-}
-
-// ── Helper: attach students[] to every project in a report ────────────────────
-
-async function enrichReportWithStudents(report: any) {
-  // 1. Collect all projectIds mentioned in this report
-  const projectIds: string[] = []
-  const subjectIds: string[] = []
-
-  for (const subj of report.subjects ?? []) {
-    subjectIds.push(subj.subjectId?.toString())
-    for (const proj of subj.projects ?? []) {
-      projectIds.push(proj.projectId?.toString())
-    }
-  }
-
-  if (projectIds.length === 0) return report // nothing to enrich
-
-  // 2. Fetch all submissions for these projects in ONE query
-  const submissions = await Submission.find({
-    project: { $in: projectIds },
-  })
-    .populate('student', 'name email')   // get name + email from User
-    .lean()
-
-  // 3. Fetch enrolled students per subject in ONE query
-  //    ⚠️  If your Subject model uses a different field (e.g. "enrollments")
-  //        change "students" below to match.
-  const subjects = await Subject.find({
-    _id: { $in: subjectIds },
-  })
-    .populate('students', 'name email')  // ← change "students" if needed
-    .lean()
-
-  // Build a lookup: subjectId → enrolled student list
-  const subjectStudentMap: Record<string, { _id: string; name: string; email: string }[]> = {}
-  for (const s of subjects as any[]) {
-    subjectStudentMap[s._id.toString()] = s.students ?? s.enrollments ?? []
-  }
-
-  // 4. Build a lookup: projectId → submissions[]
-  const subMap: Record<string, any[]> = {}
-  for (const sub of submissions as any[]) {
-    const pid = sub.project?.toString()
-    if (!pid) continue
-    if (!subMap[pid]) subMap[pid] = []
-    subMap[pid].push(sub)
-  }
-
-  // 5. Re-build the subjects array with students[] on each project
-  const enrichedSubjects = (report.subjects ?? []).map((subj: any) => {
-    const enrolledStudents: any[] =
-      subjectStudentMap[subj.subjectId?.toString()] ?? []
-
-    const enrichedProjects = (subj.projects ?? []).map((proj: any) => {
-      const projSubs: any[] = subMap[proj.projectId?.toString()] ?? []
-
-      const students: StudentRow[] = enrolledStudents.map((student) => {
-        const sub = projSubs.find(
-          (s) => s.student?._id?.toString() === student._id?.toString()
-        )
-        return {
-          name:        student.name  ?? '—',
-          email:       student.email ?? '—',
-          didSubmit:   !!sub,
-          isLate:      sub ? (sub.isLate ?? false) : false,
-          submittedAt: sub
-            ? (sub.submittedAt?.toISOString?.() ?? sub.createdAt?.toISOString?.() ?? null)
-            : null,
-        }
-      })
-
-      return { ...proj, students }
-    })
-
-    return { ...subj, projects: enrichedProjects }
-  })
-
-  // Return a plain object with enriched subjects
-  return {
-    ...(report.toObject?.() ?? report),
-    subjects: enrichedSubjects,
-  }
-}
-
-// ── Route handler ─────────────────────────────────────────────────────────────
-
-export async function GET(req: NextRequest) {
+// ── GET: list stored report snapshots ────────────────────────────────────────
+// For now returns a fresh snapshot on every GET (extend with a Report model
+// if you want persistence / history).
+export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any).role !== 'admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  await connectDB()
+  return generateSnapshot()
+}
 
-  const id = req.nextUrl.searchParams.get('id')
-
-  if (id) {
-    // Single report
-    const report = await Report.findById(id).populate('teacher', 'name email')
-    if (!report) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-    const enriched = await enrichReportWithStudents(report)
-    return NextResponse.json(enriched)
+// ── POST /generate: generate + save + notify ─────────────────────────────────
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session || (session.user as any).role !== 'admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // All submitted reports — enrich each one
-  const reports = await Report.find({ status: 'submitted' })
-    .populate('teacher', 'name email')
-    .sort({ submittedAt: -1 })
+  const snapshot = await generateSnapshot()
+  const data     = await snapshot.json()
 
-  const enriched = await Promise.all(
-    reports.map((r) => enrichReportWithStudents(r))
+  // Notify all admins that the new report is ready
+  const generatedBy = (session.user as any).name ?? 'An admin'
+
+  await notifyAdmins({
+    type:    'new_report',
+    title:   '📊 New Report Available',
+    message: `${generatedBy} generated a new performance report. ${data.summary.totalStudents} students · ${data.summary.totalSubmissions} submissions · ${data.summary.belowThreshold} below pass threshold.`,
+    link:    '/admin/reports',
+  })
+
+  return NextResponse.json(data)
+}
+
+// ── Shared aggregation logic ──────────────────────────────────────────────────
+async function generateSnapshot(): Promise<NextResponse> {
+  await connectDB()
+
+  const subjects = await Subject.find({})
+    .populate('teacher', 'name')
+    .lean() as any[]
+
+  const subjectStats = await Promise.all(
+    subjects.map(async (subj) => {
+      const projects = await Project.find({
+        subject: subj._id,
+        status:  'approved',
+      }).select('_id maxScore').lean() as { _id: any; maxScore: number }[]
+
+      const totalProjects = projects.length
+      if (totalProjects === 0) return null
+
+      const projectIds = projects.map(p => p._id)
+
+      const submissions = await Submission.find({
+        project: { $in: projectIds },
+        status:  { $in: ['submitted', 'graded'] },
+      }).select('student status grade project').lean() as any[]
+
+      const graded   = submissions.filter(s => s.status === 'graded')
+      const pending  = submissions.filter(s => s.status === 'submitted').length
+
+      // Avg grade across graded submissions
+      const totalGrade = graded.reduce((sum, s) => sum + (s.grade ?? 0), 0)
+      const avgGrade   = graded.length > 0 ? Math.round(totalGrade / graded.length) : null
+
+      // Per-student: count unique submitters
+      const uniqueSubmitters = new Set(submissions.map(s => s.student?.toString())).size
+
+      // Students below threshold (graded but failing)
+      const projectMaxMap = Object.fromEntries(projects.map(p => [p._id.toString(), p.maxScore]))
+      const belowThreshold = graded.filter(s => {
+        const max = projectMaxMap[s.project?.toString()] ?? 100
+        return max > 0 && (s.grade ?? 0) / max < PASS_THRESHOLD
+      }).length
+
+      return {
+        subject:         { _id: subj._id, name: subj.name, code: subj.code },
+        teacher:         subj.teacher?.name ?? '—',
+        totalProjects,
+        totalSubmissions: submissions.length,
+        gradedCount:      graded.length,
+        pendingGrade:     pending,
+        uniqueSubmitters,
+        avgGrade,
+        belowThreshold,
+      }
+    })
   )
 
-  return NextResponse.json(enriched)
+  const stats = subjectStats.filter(Boolean) as NonNullable<(typeof subjectStats)[0]>[]
+
+  // System-wide totals
+  const totalStudents    = await User.countDocuments({ role: 'student', isActive: true })
+  const totalTeachers    = await User.countDocuments({ role: 'teacher', isActive: true })
+  const totalSubmissions = stats.reduce((sum, s) => sum + s.totalSubmissions, 0)
+  const totalPending     = stats.reduce((sum, s) => sum + s.pendingGrade,    0)
+  const belowThreshold   = stats.reduce((sum, s) => sum + s.belowThreshold,  0)
+
+  return NextResponse.json({
+    generatedAt: new Date().toISOString(),
+    summary: {
+      totalStudents,
+      totalTeachers,
+      totalSubjects:    stats.length,
+      totalSubmissions,
+      pendingGrade:     totalPending,
+      belowThreshold,
+    },
+    subjects: stats,
+  })
 }

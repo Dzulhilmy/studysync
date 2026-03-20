@@ -1,7 +1,7 @@
 /**
- * FILE: app/api/student/profile/route.ts
+ * FILE: app/api/teacher/profile/route.ts
  *
- * PATCH → Updates the student's name and/or password.
+ * PATCH → Updates the teacher's name and/or password.
  *          Requires current password verification before allowing password change.
  *          Notifies all admins of exactly what changed.
  */
@@ -51,8 +51,8 @@ export async function PATCH(req: NextRequest) {
   if (changes.length) {
     await notifyAdmins({
       type:    'profile_updated',
-      title:   '✏️ Student Profile Updated',
-      message: `${user.name} (student) updated their profile. Changes: ${changes.join(' · ')}`,
+      title:   '✏️ Teacher Profile Updated',
+      message: `${user.name} (teacher) updated their profile. Changes: ${changes.join(' · ')}`,
       link:    '/admin/users',
     })
   }

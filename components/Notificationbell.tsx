@@ -1,74 +1,121 @@
 'use client'
 
-/**
- * NotificationBell
- *
- * Drop into any layout. Polls every 30s. Shows unread badge.
- * Clicking a notification marks it read and navigates to its link.
- *
- * Usage:
- *   import NotificationBell from '@/components/NotificationBell'
- *   <NotificationBell />
- */
-
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { IconClose } from '@/components/NavIcons'
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Notification {
-  _id: string
-  type: string
-  title: string
-  message: string
-  link: string
-  isRead: boolean
+  _id:       string
+  type:      string
+  title:     string
+  message:   string
+  link:      string
+  read:      boolean
   createdAt: string
 }
 
-const TYPE_ICON: Record<string, string> = {
-  project_approved:    '✅',
-  project_rejected:    '❌',
-  project_published:   '📋',
-  submission_received: '📥',
-  submission_graded:   '🏆',
-  deadline_warning:    '⏰',
-  announcement_posted: '📢',
+// ── Role themes ───────────────────────────────────────────────────────────────
+
+const THEME = {
+  admin: {
+    accent:  '#c0392b',
+    badgeBg: '#c0392b',
+    header:  '#2c1810',
+    unread:  'border-l-[#c0392b]',
+    hover:   'hover:bg-[rgba(192,57,43,0.05)]',
+  },
+  teacher: {
+    accent:  '#1a7a6e',
+    badgeBg: '#1a7a6e',
+    header:  '#1a3a2a',
+    unread:  'border-l-[#1a7a6e]',
+    hover:   'hover:bg-[rgba(26,122,110,0.05)]',
+  },
+  student: {
+    accent:  '#63b3ed',
+    badgeBg: '#1a6a9e',
+    header:  '#1a2535',
+    unread:  'border-l-[#63b3ed]',
+    hover:   'hover:bg-[rgba(99,179,237,0.05)]',
+  },
 }
 
-function timeAgo(date: string) {
-  const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
-  if (s < 60)    return 'just now'
-  if (s < 3600)  return `${Math.floor(s / 60)}m ago`
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
-  return `${Math.floor(s / 86400)}d ago`
-}
-
-export default function NotificationBell() {
-  const router = useRouter()
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount,   setUnreadCount]   = useState(0)
-  const [open,          setOpen]          = useState(false)
-  const [loading,       setLoading]       = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  async function fetchNotifications() {
-    try {
-      const res  = await fetch('/api/notifications?limit=10')
-      const data = await res.json()
-      if (data.notifications) {
-        setNotifications(data.notifications)
-        setUnreadCount(data.unreadCount)
-      }
-    } catch { /* silent */ }
+// Safe getter — always returns a valid theme regardless of what role value arrives
+function getTheme(role: string | undefined | null) {
+  if (role === 'admin' || role === 'teacher' || role === 'student') {
+    return THEME[role]
   }
+  return THEME.teacher // neutral fallback
+}
 
-  // Poll every 30 seconds
-  useEffect(() => {
-    fetchNotifications()
-    const id = setInterval(fetchNotifications, 30_000)
-    return () => clearInterval(id)
+// ── Type icon map ─────────────────────────────────────────────────────────────
+
+const TYPE_ICON: Record<string, string> = {
+  submission_graded:        '✅',
+  redo_requested:           '🔄',
+  new_message:              '💬',
+  project_published:        '📚',
+  new_submission:           '📥',
+  project_approved:         '✅',
+  project_rejected:         '❌',
+  project_pending_approval: '🔔',
+  profile_updated:          '✏️',
+  new_report:               '📊',
+}
+
+function fmt(iso: string) {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (diff < 60)    return 'just now'
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return new Date(iso).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' })
+}
+
+// ── Bell SVG ──────────────────────────────────────────────────────────────────
+
+function BellIcon({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  )
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+interface NotificationBellProps {
+  role?: string   // deliberately loose so session.user.role works directly
+}
+
+export default function NotificationBell({ role }: NotificationBellProps) {
+  const router                        = useRouter()
+  const theme                         = getTheme(role)   // never undefined
+  const [open,          setOpen]      = useState(false)
+  const [notifications, setNotifs]    = useState<Notification[]>([])
+  const [unreadCount,   setUnread]    = useState(0)
+  const [loading,       setLoading]   = useState(false)
+  const dropdownRef                   = useRef<HTMLDivElement>(null)
+
+  const fetchNotifs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/notifications?limit=30')
+      if (!res.ok) return
+      const data = await res.json()
+      setNotifs(data.notifications ?? [])
+      setUnread(data.unreadCount   ?? 0)
+    } catch { /* silent */ }
   }, [])
 
-  // Close dropdown when clicking outside
+  useEffect(() => {
+    fetchNotifs()
+    const interval = setInterval(fetchNotifs, 30_000)
+    return () => clearInterval(interval)
+  }, [fetchNotifs])
+
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -79,166 +126,139 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  async function handleClick(notif: Notification) {
-    setOpen(false)
-    // Mark as read
-    if (!notif.isRead) {
-      await fetch('/api/notifications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: notif._id }),
-      })
-      setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, isRead: true } : n))
-      setUnreadCount(prev => Math.max(0, prev - 1))
-    }
-    router.push(notif.link)
+  async function markRead(id: string) {
+    await fetch('/api/notifications', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    setNotifs(prev => prev.map(n => n._id === id ? { ...n, read: true } : n))
+    setUnread(prev => Math.max(0, prev - 1))
   }
 
   async function markAllRead() {
     setLoading(true)
     await fetch('/api/notifications', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ markAll: true }),
     })
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
-    setUnreadCount(0)
+    setNotifs(prev => prev.map(n => ({ ...n, read: true })))
+    setUnread(0)
     setLoading(false)
   }
 
-  async function dismiss(e: React.MouseEvent, id: string) {
+  async function deleteNotif(e: React.MouseEvent, id: string, wasRead: boolean) {
     e.stopPropagation()
     await fetch(`/api/notifications?id=${id}`, { method: 'DELETE' })
-    setNotifications(prev => {
-      const notif = prev.find(n => n._id === id)
-      if (notif && !notif.isRead) setUnreadCount(c => Math.max(0, c - 1))
-      return prev.filter(n => n._id !== id)
-    })
+    setNotifs(prev => prev.filter(n => n._id !== id))
+    if (!wasRead) setUnread(prev => Math.max(0, prev - 1))
+  }
+
+  function handleClick(notif: Notification) {
+    if (!notif.read) markRead(notif._id)
+    setOpen(false)
+    if (notif.link && notif.link !== '/') router.push(notif.link)
   }
 
   return (
-    <div ref={dropdownRef} className="relative">
-      {/* ── Bell button ── */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="relative flex items-center justify-center w-9 h-9 rounded-sm transition-all
-          hover:bg-[rgba(250,246,238,0.08)] border border-transparent hover:border-[rgba(250,246,238,0.1)]"
-        aria-label="Notifications"
-      >
-        {/* Bell SVG */}
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-          stroke="rgba(250,246,238,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-        </svg>
+    <div className="relative" ref={dropdownRef}>
 
-        {/* Unread badge */}
+      {/* Bell button */}
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="relative p-2 rounded-sm transition-colors hover:bg-black/5"
+        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+      >
+        <BellIcon size={20} color={open ? theme.accent : '#7a6a52'} />
+
+        {/* Unread badge — only render when there's something to show */}
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1
-            bg-[#c0392b] text-white text-[9px] font-bold font-mono
-            flex items-center justify-center rounded-full leading-none">
+          <span
+            className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold text-white leading-none px-1"
+            style={{ background: theme.badgeBg }}
+          >
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
 
-      {/* ── Dropdown ── */}
+      {/* Dropdown */}
       {open && (
-        <div className="absolute right-0 top-11 w-80 z-[200]
-          bg-[#1a1209] border border-[rgba(212,168,67,0.2)] rounded-sm
-          shadow-[6px_6px_0_rgba(0,0,0,0.4)] overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-80 max-h-[480px] flex flex-col bg-white border border-[#c8b89a] rounded-sm z-50 overflow-hidden"
+          style={{ boxShadow: '4px 4px 0 #c8b89a' }}>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3
-            border-b border-[rgba(212,168,67,0.12)] bg-[rgba(26,18,9,0.8)]">
+          <div className="px-4 py-3 flex items-center justify-between shrink-0"
+            style={{ background: theme.header }}>
             <div className="flex items-center gap-2">
-              <span className="text-[#d4a843] text-xs font-mono uppercase tracking-widest font-bold">
+              <BellIcon size={14} color="#d4a843" />
+              <span className="text-[#d4a843] text-xs font-mono uppercase tracking-wider">
                 Notifications
               </span>
               {unreadCount > 0 && (
-                <span className="text-[9px] font-mono bg-[#c0392b] text-white px-1.5 py-0.5 rounded-full">
-                  {unreadCount} new
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-sm font-bold text-white"
+                  style={{ background: theme.badgeBg }}>
+                  {unreadCount}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllRead}
-                  disabled={loading}
-                  className="text-[10px] font-mono text-[rgba(212,168,67,0.6)] hover:text-[#d4a843] transition-colors disabled:opacity-40"
-                >
-                  Mark all read
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Notification list */}
-          <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center">
-                <div className="text-3xl mb-2">🔔</div>
-                <p className="text-[rgba(250,246,238,0.4)] text-xs font-mono">No notifications yet</p>
-              </div>
-            ) : (
-              notifications.map(n => (
-                <button
-                  key={n._id}
-                  onClick={() => handleClick(n)}
-                  className={`w-full text-left px-4 py-3 border-b border-[rgba(212,168,67,0.06)]
-                    hover:bg-[rgba(212,168,67,0.06)] transition-colors group flex items-start gap-3
-                    ${!n.isRead ? 'bg-[rgba(212,168,67,0.04)]' : ''}`}
-                >
-                  {/* Icon */}
-                  <span className="text-base shrink-0 mt-0.5">
-                    {TYPE_ICON[n.type] ?? '🔔'}
-                  </span>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className={`text-xs font-semibold truncate block ${
-                        !n.isRead ? 'text-[#faf6ee]' : 'text-[rgba(250,246,238,0.6)]'
-                      }`}>
-                        {n.title}
-                      </span>
-                      {!n.isRead && (
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#d4a843] shrink-0 mt-1" />
-                      )}
-                    </div>
-                    <p className="text-[10px] text-[rgba(250,246,238,0.4)] mt-0.5 leading-relaxed line-clamp-2">
-                      {n.message}
-                    </p>
-                    <span className="text-[9px] font-mono text-[rgba(250,246,238,0.25)] mt-1 block">
-                      {timeAgo(n.createdAt)}
-                    </span>
-                  </div>
-
-                  {/* Dismiss */}
-                  <button
-                    onClick={(e) => dismiss(e, n._id)}
-                    className="text-[rgba(250,246,238,0.2)] hover:text-[rgba(192,57,43,0.8)]
-                      text-xs opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5 px-1"
-                    aria-label="Dismiss"
-                  >
-                    ✕
-                  </button>
-                </button>
-              ))
+            {unreadCount > 0 && (
+              <button onClick={markAllRead} disabled={loading}
+                className="text-[10px] font-mono text-[#d4a843] underline opacity-80 hover:opacity-100 disabled:opacity-40 transition-opacity">
+                Mark all read
+              </button>
             )}
           </div>
 
-          {/* Footer — view all */}
-          <div className="px-4 py-2.5 border-t border-[rgba(212,168,67,0.12)] bg-[rgba(26,18,9,0.8)]">
-            <button
-              onClick={() => { setOpen(false); router.push('announcements') }}
-              className="w-full text-[10px] font-mono text-[rgba(212,168,67,0.5)] hover:text-[#d4a843]
-                transition-colors text-center uppercase tracking-widest"
-            >
-              View all in Announcements →
-            </button>
+          {/* Notification list */}
+          <div className="flex-1 overflow-y-auto divide-y divide-[#f0e9d6]">
+            {notifications.length === 0 ? (
+              <div className="py-10 text-center">
+                <BellIcon size={28} color="#c8b89a" />
+                <p className="text-[#a89880] text-xs font-mono mt-2">No notifications yet</p>
+              </div>
+            ) : notifications.map(n => (
+              <div key={n._id} onClick={() => handleClick(n)}
+                className={`px-4 py-3 cursor-pointer flex gap-3 items-start group transition-colors
+                  border-l-2 ${n.read ? 'border-l-transparent bg-white' : `${theme.unread} bg-[#fdfcf8]`}
+                  ${theme.hover}`}>
+
+                <span className="text-base shrink-0 mt-0.5 select-none">
+                  {TYPE_ICON[n.type] ?? '🔔'}
+                </span>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-1">
+                    <p className={`text-xs leading-snug ${n.read ? 'text-[#4a3828]' : 'text-[#1a1209] font-semibold'}`}>
+                      {n.title}
+                    </p>
+                    <button onClick={e => deleteNotif(e, n._id, n.read)}
+                      className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[#c8b89a] hover:text-[#c0392b] ml-1 mt-0.5">
+                      <IconClose size={11} color="currentColor" />
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-[#7a6a52] leading-snug mt-0.5 line-clamp-2">
+                    {n.message}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-mono text-[#a89880]">{fmt(n.createdAt)}</span>
+                    {!n.read && (
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ background: theme.accent }} />
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
+
+          {/* Footer */}
+          {notifications.length > 0 && (
+            <div className="px-4 py-2 border-t border-[#f0e9d6] bg-[#faf6ee] shrink-0 text-center">
+              <span className="text-[10px] font-mono text-[#a89880]">
+                {notifications.length} notification{notifications.length !== 1 ? 's' : ''} · updates every 30s
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>

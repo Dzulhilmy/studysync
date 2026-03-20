@@ -8,6 +8,7 @@ import {
   IconClose, IconTrash, IconSave, IconRefresh, IconCalendar, IconTrophy
 } from '@/components/NavIcons'
 import FileUpload from '@/components/FileUpload'
+import { getDaysLeft } from '@/lib/dateUtils'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,11 +63,13 @@ interface SubjectGroup { _id: string; name: string; code: string; projects: Proj
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function timeLabel(deadline: string): { text: string; overdue: boolean; daysNum: number } {
-  const daysNum = Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000)
-  if (daysNum > 0)   return { text: `${daysNum}d left`,          overdue: false, daysNum }
-  if (daysNum === 0) return { text: 'Due today',                 overdue: false, daysNum: 0 }
-  return               { text: `${Math.abs(daysNum)}d overdue`,  overdue: true,  daysNum }
+// Returns true when the deadline has already passed
+function isOverdue(deadline: string) {
+  const d = new Date(deadline)
+  d.setHours(0, 0, 0, 0)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return d < today
 }
 
 function fmt(iso: string | null) {
@@ -86,7 +89,6 @@ function VersionsModal({ project, onClose }: { project: Project; onClose: () => 
       onClick={onClose}>
       <div className="bg-white border border-[#c8b89a] rounded-sm shadow-[6px_6px_0_#c8b89a] w-full max-w-lg max-h-[80vh] flex flex-col"
         onClick={e => e.stopPropagation()}>
-
         <div className="bg-[#1a2535] px-5 py-4 flex items-center justify-between shrink-0">
           <div>
             <div className="text-[#63b3ed] font-bold text-sm" style={{ fontFamily: 'Georgia, serif' }}>
@@ -100,7 +102,6 @@ function VersionsModal({ project, onClose }: { project: Project; onClose: () => 
             <IconClose size={15} color="currentColor" />
           </button>
         </div>
-
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {sorted.length === 0 ? (
             <p className="text-center py-8 text-[#7a6a52] text-sm">No version history yet.</p>
@@ -111,8 +112,6 @@ function VersionsModal({ project, onClose }: { project: Project; onClose: () => 
                   ? 'border-[#63b3ed] bg-[rgba(99,179,237,0.03)]'
                   : 'border-[#e8dfc8] bg-white opacity-80'
               }`}>
-
-              {/* Version bar */}
               <div className={`px-4 py-2.5 flex items-center justify-between ${
                 v.version === sub.currentVersion ? 'bg-[rgba(99,179,237,0.08)]' : 'bg-[#faf6ee]'
               }`}>
@@ -125,9 +124,7 @@ function VersionsModal({ project, onClose }: { project: Project; onClose: () => 
                   {v.version === sub.currentVersion && (
                     <span className="text-[10px] font-mono text-[#63b3ed]">Current</span>
                   )}
-                  {v.isLate && (
-                    <span className="text-[10px] font-mono text-[#c0392b]">🕐 Late</span>
-                  )}
+                  {v.isLate && <span className="text-[10px] font-mono text-[#c0392b]">🕐 Late</span>}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
@@ -140,8 +137,6 @@ function VersionsModal({ project, onClose }: { project: Project; onClose: () => 
                   <span className="text-[11px] font-mono text-[#7a6a52]">{fmt(v.submittedAt)}</span>
                 </div>
               </div>
-
-              {/* Version content */}
               <div className="px-4 py-3 space-y-2">
                 {v.textResponse && (
                   <div>
@@ -175,13 +170,9 @@ function VersionsModal({ project, onClose }: { project: Project; onClose: () => 
 // ── Messages Panel ────────────────────────────────────────────────────────────
 
 function MessagesPanel({
-  submissionId,
-  messages: init,
-  onNewMessage,
+  submissionId, messages: init, onNewMessage,
 }: {
-  submissionId:  string
-  messages:      Message[]
-  onNewMessage:  () => void
+  submissionId: string; messages: Message[]; onNewMessage: () => void
 }) {
   const [messages, setMessages] = useState(init)
   const [text,     setText]     = useState('')
@@ -196,16 +187,10 @@ function MessagesPanel({
     setSending(true)
     try {
       const res = await fetch('/api/submissions/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ submissionId, content: text.trim() }),
       })
-      if (res.ok) {
-        const updated = await res.json()
-        setMessages(updated)
-        setText('')
-        onNewMessage()
-      }
+      if (res.ok) { setMessages(await res.json()); setText(''); onNewMessage() }
     } finally { setSending(false) }
   }
 
@@ -214,12 +199,10 @@ function MessagesPanel({
       <p className="text-[10px] font-mono uppercase tracking-wider text-[#7a6a52] mb-2">
         💬 Messages {messages.length > 0 && `(${messages.length})`}
       </p>
-
       {messages.length > 0 && (
         <div className="space-y-1.5 max-h-44 overflow-y-auto mb-2 pr-0.5">
           {messages.map(m => (
-            <div key={m._id}
-              className={`flex ${m.senderRole === 'student' ? 'flex-row-reverse' : ''}`}>
+            <div key={m._id} className={`flex ${m.senderRole === 'student' ? 'flex-row-reverse' : ''}`}>
               <div className={`max-w-[82%] rounded-sm px-2.5 py-1.5 text-xs ${
                 m.senderRole === 'teacher'
                   ? 'bg-[#f0e9d6] text-[#1a1209] border border-[#c8b89a]'
@@ -238,15 +221,11 @@ function MessagesPanel({
           <div ref={bottomRef} />
         </div>
       )}
-
       <div className="flex gap-2">
-        <input
-          value={text}
-          onChange={e => setText(e.target.value)}
+        <input value={text} onChange={e => setText(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
           placeholder="Message your teacher…"
-          className="flex-1 border border-[#c8b89a] rounded-sm px-2.5 py-1.5 text-xs focus:outline-none focus:border-[#63b3ed]"
-        />
+          className="flex-1 border border-[#c8b89a] rounded-sm px-2.5 py-1.5 text-xs focus:outline-none focus:border-[#63b3ed]" />
         <button onClick={send} disabled={sending || !text.trim()}
           className="px-3 py-1.5 text-xs bg-[#1a2535] text-[#63b3ed] border border-[rgba(99,179,237,0.3)] rounded-sm disabled:opacity-40 hover:bg-[#243040] transition-colors font-mono">
           Send
@@ -261,7 +240,6 @@ function MessagesPanel({
 function VersionChips({ submission, onClick }: { submission: Submission; onClick: () => void }) {
   const versions = submission.versions ?? []
   if (versions.length === 0) return null
-
   return (
     <div className="flex items-center gap-1.5 flex-wrap mt-2">
       {versions.map(v => (
@@ -285,8 +263,8 @@ function VersionChips({ submission, onClick }: { submission: Submission; onClick
 // ── Status badge config ───────────────────────────────────────────────────────
 
 const LEFT_BADGE: Record<string, { label: string; style: string } | null> = {
-  none:           { label: '○ Not submitted',      style: 'text-[#c0392b] bg-[rgba(192,57,43,0.06)] border-[rgba(192,57,43,0.2)]' },
-  draft:          { label: '✎ Draft',              style: 'text-[#8b5a2b] bg-[rgba(139,90,43,0.08)] border-[rgba(139,90,43,0.25)]' },
+  none:           { label: '○ Not submitted',       style: 'text-[#c0392b] bg-[rgba(192,57,43,0.06)] border-[rgba(192,57,43,0.2)]' },
+  draft:          { label: '✎ Draft',               style: 'text-[#8b5a2b] bg-[rgba(139,90,43,0.08)] border-[rgba(139,90,43,0.25)]' },
   submitted:      null,
   graded:         null,
   redo_requested: { label: '🔄 Revision Requested', style: 'text-[#d4a843] bg-[rgba(212,168,67,0.08)] border-[rgba(212,168,67,0.35)]' },
@@ -353,24 +331,14 @@ export default function StudentProjectsPage() {
           body: JSON.stringify(body),
         })
       }
-
-      // Safely parse — server may return HTML on a 500 or an empty body
       const contentType = res.headers.get('content-type') ?? ''
       const data = contentType.includes('application/json') ? await res.json() : null
-
-      if (!res.ok) {
-        setError(data?.error ?? `Server error (${res.status}). Please try again.`)
-        return
-      }
+      if (!res.ok) { setError(data?.error ?? `Server error (${res.status}).`); return }
       setActiveProject(null); load()
     } catch (err) {
-      // Only reaches here on a true network failure (offline, DNS, etc.)
       console.error('[handleSubmit]', err)
-      setError('Could not reach the server. Please check your connection and try again.')
-    } finally {
-      setSavingDraft(false)
-      setSubmitting(false)
-    }
+      setError('Could not reach the server. Please check your connection.')
+    } finally { setSavingDraft(false); setSubmitting(false) }
   }
 
   async function handleDelete(submissionId: string) {
@@ -382,13 +350,15 @@ export default function StudentProjectsPage() {
     setActiveProject(null); load()
   }
 
+  // Warning strip: redo requests + projects due within 5 days that aren't submitted
   const allProjects = subjects.flatMap(s => s.projects)
-  const warnings    = allProjects.filter(p => {
+  const warnings = allProjects.filter(p => {
     if (p.submission?.redoRequested) return true
     const sub = p.submission
     if (sub && (sub.status === 'submitted' || sub.status === 'graded')) return false
-    const { daysNum, overdue } = timeLabel(p.deadline)
-    return !overdue && daysNum <= 5
+    const dl = getDaysLeft(p.deadline)
+    // amber or red = within 7 days (threshold from dateUtils) and not overdue
+    return !isOverdue(p.deadline) && (dl.color === '#d4a843' || dl.color === '#c0392b')
   })
 
   return (
@@ -410,7 +380,7 @@ export default function StudentProjectsPage() {
         <div className="mt-4 mb-5 space-y-2">
           {warnings.map(p => {
             const isRedo = p.submission?.redoRequested
-            const { text } = timeLabel(p.deadline)
+            const dl     = getDaysLeft(p.deadline)
             return (
               <div key={p._id}
                 className={`flex items-center gap-3 rounded-sm px-4 py-2.5 border ${
@@ -418,11 +388,11 @@ export default function StudentProjectsPage() {
                     ? 'bg-[rgba(192,57,43,0.05)] border-[rgba(192,57,43,0.35)]'
                     : 'bg-[rgba(212,168,67,0.07)] border-[rgba(212,168,67,0.4)]'
                 }`}>
-                <IconWarning size={17} color={isRedo ? '#c0392b' : '#d4a843'} />
+                <IconWarning size={17} color={isRedo ? '#c0392b' : dl.color} />
                 <span className="text-sm flex-1" style={{ color: isRedo ? '#8b2020' : '#8b5a2b' }}>
                   {isRedo
                     ? <><strong>{p.title}</strong> — Teacher has requested a revision</>
-                    : <><strong>{p.title}</strong> — {text}!</>
+                    : <><strong>{p.title}</strong> — {dl.label}!</>
                   }
                 </span>
                 <button onClick={() => openSubmit(p)}
@@ -464,15 +434,20 @@ export default function StudentProjectsPage() {
                 <div className="font-bold text-[#1a1209] text-sm" style={{ fontFamily: 'Georgia, serif' }}>
                   {activeProject.title}
                 </div>
-                <div className="text-xs text-[#7a6a52] mt-0.5 flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <IconCalendar size={12} color="currentColor" />
-                    Due {new Date(activeProject.deadline).toLocaleDateString()}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <IconTrophy size={12} color="currentColor" /> {activeProject.maxScore}pts max
-                  </span>
-                </div>
+                {(() => {
+                  const dl = getDaysLeft(activeProject.deadline)
+                  return (
+                    <div className="text-xs mt-0.5 flex items-center gap-3">
+                      <span className="flex items-center gap-1 font-mono font-semibold" style={{ color: dl.color }}>
+                        <IconCalendar size={12} color={dl.color} />
+                        {dl.label} · {new Date(activeProject.deadline).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                      <span className="flex items-center gap-1 text-[#7a6a52]">
+                        <IconTrophy size={12} color="#7a6a52" /> {activeProject.maxScore}pts max
+                      </span>
+                    </div>
+                  )
+                })()}
                 {activeProject.description && (
                   <p className="text-xs text-[#7a6a52] mt-1">{activeProject.description}</p>
                 )}
@@ -506,20 +481,12 @@ export default function StudentProjectsPage() {
                 </div>
               )}
 
-              {/* ── File upload ── */}
               <div>
-                <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1.5">
-                  Attach File
-                </label>
-                <FileUpload
-                  value={formFileUrl}
-                  onChange={(url) => setFormFileUrl(url)}
-                  accentColor="#63b3ed"
-                  inputId="submission-file-upload"
-                />
+                <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1.5">Attach File</label>
+                <FileUpload value={formFileUrl} onChange={(url) => setFormFileUrl(url)}
+                  accentColor="#63b3ed" inputId="submission-file-upload" />
               </div>
 
-              {/* ── Divider ── */}
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-px bg-[#e8dfc8]" />
                 <span className="text-[10px] font-mono text-[#a89880] uppercase tracking-widest">or paste a link</span>
@@ -561,7 +528,8 @@ export default function StudentProjectsPage() {
                       {savingDraft ? 'Saving…' : <><IconSave size={13} color="currentColor" /> Save Draft</>}
                     </button>
                   )}
-                  <button onClick={() => handleSubmit(false)} disabled={submitting || savingDraft || (!formFileUrl && !formText)}
+                  <button onClick={() => handleSubmit(false)}
+                    disabled={submitting || savingDraft || (!formFileUrl && !formText)}
                     className="text-xs px-4 py-2 bg-[#1a2535] text-[#63b3ed] border border-[rgba(99,179,237,0.3)] rounded-sm hover:bg-[#243040] disabled:opacity-50 transition-colors font-semibold">
                     {submitting
                       ? 'Submitting…'
@@ -587,7 +555,7 @@ export default function StudentProjectsPage() {
         <VersionsModal project={versionProject} onClose={() => setVersionProject(null)} />
       )}
 
-      {/* ── Teacher Comment Modal ── */}
+      {/* ── Teacher Feedback Modal ── */}
       {commentProject && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-[#c8b89a] rounded-sm shadow-[5px_5px_0_#c8b89a] w-full max-w-sm">
@@ -598,7 +566,8 @@ export default function StudentProjectsPage() {
                   {commentProject.title}
                 </p>
               </div>
-              <button onClick={() => setCommentProject(null)} className="text-[rgba(250,246,238,0.4)] hover:text-white p-1 rounded-sm transition-colors">
+              <button onClick={() => setCommentProject(null)}
+                className="text-[rgba(250,246,238,0.4)] hover:text-white p-1 rounded-sm transition-colors">
                 <IconClose size={16} color="currentColor" />
               </button>
             </div>
@@ -636,7 +605,8 @@ export default function StudentProjectsPage() {
             {subject.projects.map(project => {
               const sub       = project.submission
               const subStatus = sub?.redoRequested ? 'redo_requested' : (sub?.status ?? 'none')
-              const { text: timeText, overdue, daysNum } = timeLabel(project.deadline)
+              const dl        = getDaysLeft(project.deadline)   // ← single source of truth
+              const overdue   = isOverdue(project.deadline)
               const leftBadge = LEFT_BADGE[subStatus]
               const msgCount  = sub?.messages?.length ?? 0
               const versCount = sub?.versions?.length ?? 0
@@ -645,8 +615,8 @@ export default function StudentProjectsPage() {
               return (
                 <div key={project._id}
                   className={`bg-white border rounded-sm p-5 shadow-[3px_3px_0_#c8b89a] transition-all hover:shadow-[4px_4px_0_#c8b89a] ${
-                    sub?.redoRequested         ? 'border-[rgba(212,168,67,0.55)]'   :
-                    overdue && !sub            ? 'border-[rgba(192,57,43,0.4)]'     :
+                    sub?.redoRequested     ? 'border-[rgba(212,168,67,0.55)]' :
+                    overdue && !sub        ? 'border-[rgba(192,57,43,0.4)]'  :
                     'border-[#c8b89a]'
                   }`}>
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
@@ -673,7 +643,7 @@ export default function StudentProjectsPage() {
                         <p className="text-xs text-[#7a6a52] mt-0.5 line-clamp-1">{project.description}</p>
                       )}
 
-                      {/* Redo reason inline */}
+                      {/* Redo reason */}
                       {sub?.redoRequested && sub.redoReason && (
                         <div className="mt-2 px-2.5 py-2 bg-[rgba(212,168,67,0.06)] border border-[rgba(212,168,67,0.3)] rounded-sm">
                           <p className="text-xs text-[#8b5a2b]">
@@ -682,13 +652,16 @@ export default function StudentProjectsPage() {
                         </div>
                       )}
 
-                      {/* Meta */}
-                      <div className="flex flex-wrap gap-3 mt-2 text-xs text-[#7a6a52] font-mono items-center">
-                        <span className={`flex items-center gap-1 ${overdue && !sub ? 'text-[#c0392b] font-bold' : ''}`}>
-                          <IconCalendar size={12} color={overdue && !sub ? '#c0392b' : '#7a6a52'} />
-                          {timeText} · {new Date(project.deadline).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {/* ── Deadline row — colour-coded via getDaysLeft ── */}
+                      <div className="flex flex-wrap gap-3 mt-2 text-xs font-mono items-center">
+                        <span className="flex items-center gap-1 font-semibold" style={{ color: dl.color }}>
+                          <IconCalendar size={12} color={dl.color} />
+                          {dl.label}
+                          <span className="font-normal text-[#7a6a52] ml-0.5">
+                            · {new Date(project.deadline).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
                         </span>
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 text-[#7a6a52]">
                           <IconTrophy size={12} color="#7a6a52" /> {project.maxScore}pts
                         </span>
                       </div>
@@ -703,11 +676,7 @@ export default function StudentProjectsPage() {
                         {sub?.feedback && (
                           <button onClick={() => setCommentProject(project)}
                             className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 border border-[rgba(26,122,110,0.3)] text-[#1a7a6e] bg-[rgba(26,122,110,0.06)] hover:bg-[rgba(26,122,110,0.12)] rounded-sm transition-colors font-mono">
-                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                              <path d="M1 1Q1 0.5 1.5 0.5H10.5Q11 0.5 11 1V7.5Q11 8 10.5 8H4L1.5 10.5V8Q1 8 1 7.5Z"
-                                stroke="#1a7a6e" strokeWidth="1" fill="rgba(26,122,110,0.15)" />
-                            </svg>
-                            Teacher feedback
+                            💬 Teacher feedback
                           </button>
                         )}
                         {sub?.fileUrl && (
@@ -733,25 +702,16 @@ export default function StudentProjectsPage() {
                         )}
                       </div>
 
-                      {/* Messages panel (expandable) */}
                       {sub && isOpen && (
-                        <MessagesPanel
-                          submissionId={sub._id}
-                          messages={sub.messages ?? []}
-                          onNewMessage={load}
-                        />
+                        <MessagesPanel submissionId={sub._id} messages={sub.messages ?? []} onNewMessage={load} />
                       )}
                     </div>
 
-                    {/* Right side actions */}
+                    {/* Right-side action button */}
                     <div className="flex flex-col gap-1.5 shrink-0">
                       {subStatus === 'graded' && !sub?.redoRequested ? (
                         <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 border border-[rgba(26,122,110,0.3)] text-[#1a7a6e] bg-[rgba(26,122,110,0.06)] rounded-sm font-mono">
-                          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                            <circle cx="6.5" cy="6.5" r="5.5" stroke="#1a7a6e" strokeWidth="1.2" />
-                            <path d="M3.5 6.5L5.5 8.5L9.5 4.5" stroke="#1a7a6e" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                          Graded
+                          ✓ Graded
                         </span>
                       ) : (
                         <button onClick={() => openSubmit(project)}
@@ -761,16 +721,15 @@ export default function StudentProjectsPage() {
                               : 'bg-[#1a2535] text-[#63b3ed] border-[rgba(99,179,237,0.3)] hover:bg-[#243040]'
                           }`}>
                           {sub?.redoRequested
-                            ? <><IconRefresh size={13} color="currentColor" />Update Submission</>
+                            ? <><IconRefresh size={13} color="currentColor" /> Update Submission</>
                             : sub
                               ? sub.status === 'draft'
-                                ? <><IconDraft size={13} color="currentColor" />Edit Draft</>
-                                : <><IconRefresh size={13} color="currentColor" />Update</>
-                              : <><IconSubmitted size={13} color="currentColor" />Submit</>
+                                ? <><IconDraft size={13} color="currentColor" /> Edit Draft</>
+                                : <><IconRefresh size={13} color="currentColor" /> Update</>
+                              : <><IconSubmitted size={13} color="currentColor" /> Submit</>
                           }
                         </button>
                       )}
-                      {/* See Versions button — always shown when versions exist */}
                       {versCount > 0 && (
                         <button onClick={() => setVersionProject(project)}
                           className="text-xs px-4 py-1.5 border border-[#c8b89a] text-[#7a6a52] hover:bg-[#f0e9d6] rounded-sm transition-colors font-mono text-center">

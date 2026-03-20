@@ -1,45 +1,40 @@
 /**
  * FILE: app/api/teacher/projects/route.ts
- *
- * EMAIL TRIGGERS ADDED:
- *   POST  → project created → email to admin(s) for approval
- *   PATCH → project approved by admin → email to all enrolled students
- *
- * HOW TO USE:
- *   Replace your existing app/api/teacher/projects/route.ts with this file.
- *   The email calls are clearly marked with ── EMAIL ── comments.
- *   Everything else is unchanged from your original logic.
  */
 
-import { NextRequest, NextResponse }        from 'next/server'
-import { getServerSession }                 from 'next-auth'
-import { authOptions }                      from '@/lib/auth'
-import connectDB                            from '@/lib/db'
-import Project                              from '@/models/Project'
-import Subject                              from '@/models/Subject'
-import User                                 from '@/models/User'
-import {
-  sendNewProjectEmail,
-  sendProjectApprovalEmail,
-} from '@/lib/email'                         // ← ADD
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession }          from 'next-auth'
+import { authOptions }               from '@/lib/auth'
+import connectDB                     from '@/lib/db'
+import Project                       from '@/models/Project'
+import Subject                       from '@/models/Subject'
+import { notifyAdmins }              from '@/lib/notifications'
 
-// ── GET: list teacher's projects ──────────────────────────────────────────────
-export async function GET(req: NextRequest) {
+// ── GET ───────────────────────────────────────────────────────────────────────
+export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any).role !== 'teacher') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   await connectDB()
 
-  const projects = await Project.find({ teacher: (session.user as any).id })
-    .populate('subject', 'name code')
+  // Find all subjects this teacher owns, then find all projects in those subjects.
+  // This works regardless of whether the project has a `teacher` field populated.
+  const teacherSubjects = await Subject.find({
+    teacher: (session.user as any).id,
+  }).select('_id').lean() as { _id: any }[]
+
+  const subjectIds = teacherSubjects.map(s => s._id)
+
+  const projects = await Project.find({ subject: { $in: subjectIds } })
+    .populate('subject', 'name code teacher')
     .sort({ createdAt: -1 })
     .lean()
 
   return NextResponse.json(projects)
 }
 
-// ── POST: create new project → notify admins ──────────────────────────────────
+// ── POST ──────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session || (session.user as any).role !== 'teacher') {
@@ -47,115 +42,68 @@ export async function POST(req: NextRequest) {
   }
   await connectDB()
 
-  const body = await req.json()
-  const { title, description, subject: subjectId, deadline, maxScore, fileUrl, fileName } = body
+  const body        = await req.json()
+  const title       = body.title       as string | undefined
+  const description = (body.description as string | undefined) ?? ''
+  const deadline    = body.deadline    as string | undefined
+  const maxScore    = body.maxScore
+  const fileUrl     = (body.fileUrl    as string | undefined) ?? null
+  const fileName    = (body.fileName   as string | undefined) ?? null
 
-  if (!title || !subjectId || !deadline) {
-    return NextResponse.json({ error: 'Title, subject and deadline are required.' }, { status: 400 })
+  // Form sends 'subject'; accept 'subjectId' as fallback
+  const subjectId = (body.subject ?? body.subjectId ?? '') as string
+
+  // Validate
+  const missing: string[] = []
+  if (!title?.trim())  missing.push('title')
+  if (!subjectId)      missing.push('subject')
+  if (!deadline)       missing.push('deadline')
+  if (maxScore == null) missing.push('maxScore')
+
+  if (missing.length) {
+    return NextResponse.json(
+      { error: `Missing required fields: ${missing.join(', ')}` },
+      { status: 400 }
+    )
   }
 
+  // Verify teacher owns this subject
+  const subject = await Subject.findById(subjectId).lean() as any
+  if (!subject) {
+    return NextResponse.json({ error: 'Subject not found' }, { status: 404 })
+  }
+
+  const teacherId = (session.user as any).id as string
+  if (subject.teacher?.toString() !== teacherId) {
+    return NextResponse.json({ error: 'Forbidden — you do not own this subject' }, { status: 403 })
+  }
+
+  // Create — include every field your Project model requires
   const project = await Project.create({
-    title, description, subject: subjectId,
-    deadline, maxScore: maxScore ?? 100,
-    fileUrl: fileUrl ?? null, fileName: fileName ?? null,
-    teacher: (session.user as any).id,
-    status: 'pending',
+    title:       title!.trim(),
+    description,
+    subject:     subjectId,
+    teacher:     teacherId,
+    createdBy:   teacherId,
+    deadline:    new Date(deadline!),
+    maxScore:    Number(maxScore),
+    fileUrl,
+    fileName,
+    status:      'pending',
   })
 
-  // ── EMAIL: notify all admins that a new project needs approval ───────────────
+  // Notify admins (non-fatal)
   try {
-    const [subject, teacher, admins] = await Promise.all([
-      Subject.findById(subjectId).lean() as any,
-      User.findById((session.user as any).id).lean() as any,
-      User.find({ role: 'admin' }).select('name email').lean() as unknown as any[],
-    ])
-
-    for (const admin of admins) {
-      await sendProjectApprovalEmail(admin.email, {
-        adminName:    admin.name,
-        teacherName:  teacher?.name  ?? session.user?.name  ?? 'Unknown',
-        teacherEmail: teacher?.email ?? session.user?.email ?? '',
-        projectTitle: title,
-        subjectName:  subject?.name  ?? subjectId,
-        subjectCode:  subject?.code  ?? '—',
-        deadline,
-        maxScore:     maxScore ?? 100,
-        description,
-      })
-    }
-  } catch (emailErr) {
-    // Never let an email failure break the main flow
-    console.error('[EMAIL] Failed to notify admins of new project:', emailErr)
+    const teacherName = (session.user as any).name ?? 'A teacher'
+    await notifyAdmins({
+      type:    'project_pending_approval',
+      title:   '🔔 Project Needs Approval',
+      message: `${teacherName} created "${title}" in ${subject.code ?? subject.name}.`,
+      link:    '/admin/projects',
+    })
+  } catch (err) {
+    console.error('[teacher/projects] notify failed (non-fatal):', err)
   }
-  // ── END EMAIL ────────────────────────────────────────────────────────────────
 
   return NextResponse.json(project, { status: 201 })
-}
-
-// ── PATCH: edit / resubmit project ───────────────────────────────────────────
-export async function PATCH(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session || (session.user as any).role !== 'teacher') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  await connectDB()
-
-  const body = await req.json()
-  const { projectId, title, description, subject: subjectId, deadline, maxScore, fileUrl, fileName } = body
-
-  if (!projectId) {
-    return NextResponse.json({ error: 'projectId required' }, { status: 400 })
-  }
-
-  const project = await Project.findOneAndUpdate(
-    { _id: projectId, teacher: (session.user as any).id },
-    { title, description, subject: subjectId, deadline, maxScore, fileUrl, fileName, status: 'pending' },
-    { new: true }
-  )
-
-  if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-  // ── EMAIL: re-submitted project (was rejected) → notify admins again ─────────
-  try {
-    const [subject, teacher, admins] = await Promise.all([
-      Subject.findById(subjectId ?? project.subject).lean() as any,
-      User.findById((session.user as any).id).lean() as any,
-      User.find({ role: 'admin' }).select('name email').lean() as unknown as any[],
-    ])
-
-    for (const admin of admins) {
-      await sendProjectApprovalEmail(admin.email, {
-        adminName:    admin.name,
-        teacherName:  teacher?.name  ?? session.user?.name  ?? 'Unknown',
-        teacherEmail: teacher?.email ?? session.user?.email ?? '',
-        projectTitle: title ?? project.title,
-        subjectName:  subject?.name  ?? '—',
-        subjectCode:  subject?.code  ?? '—',
-        deadline:     deadline ?? project.deadline,
-        maxScore:     maxScore ?? project.maxScore,
-        description:  description ?? project.description,
-      })
-    }
-  } catch (emailErr) {
-    console.error('[EMAIL] Failed to notify admins of resubmitted project:', emailErr)
-  }
-  // ── END EMAIL ────────────────────────────────────────────────────────────────
-
-  return NextResponse.json(project)
-}
-
-// ── DELETE ────────────────────────────────────────────────────────────────────
-export async function DELETE(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session || (session.user as any).role !== 'teacher') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  await connectDB()
-
-  const { searchParams } = req.nextUrl
-  const id = searchParams.get('id')
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-
-  await Project.findOneAndDelete({ _id: id, teacher: (session.user as any).id })
-  return NextResponse.json({ success: true })
 }
