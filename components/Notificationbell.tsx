@@ -20,25 +20,31 @@ interface Notification {
 
 const THEME = {
   admin: {
-    accent:  '#c0392b',
-    badgeBg: '#c0392b',
-    header:  '#2c1810',
-    unread:  'border-l-[#c0392b]',
-    hover:   'hover:bg-[rgba(192,57,43,0.05)]',
+    accent:      '#c0392b',
+    badgeBg:     '#c0392b',
+    header:      '#c0392b',
+    headerText:  '#fff5f5',
+    unread:      'border-l-[#c0392b]',
+    hover:       'hover:bg-[rgba(192,57,43,0.05)]',
+    deleteHover: 'hover:text-[#c0392b]',
   },
   teacher: {
-    accent:  '#1a7a6e',
-    badgeBg: '#1a7a6e',
-    header:  '#1a3a2a',
-    unread:  'border-l-[#1a7a6e]',
-    hover:   'hover:bg-[rgba(26,122,110,0.05)]',
+    accent:      '#27ae60',
+    badgeBg:     '#27ae60',
+    header:      '#1a3a2a',
+    headerText:  '#a8f0c6',
+    unread:      'border-l-[#27ae60]',
+    hover:       'hover:bg-[rgba(39,174,96,0.05)]',
+    deleteHover: 'hover:text-[#27ae60]',
   },
   student: {
-    accent:  '#63b3ed',
-    badgeBg: '#1a6a9e',
-    header:  '#1a2535',
-    unread:  'border-l-[#63b3ed]',
-    hover:   'hover:bg-[rgba(99,179,237,0.05)]',
+    accent:      '#63b3ed',
+    badgeBg:     '#2b7ec1',
+    header:      '#1a2535',
+    headerText:  '#a8d4f5',
+    unread:      'border-l-[#63b3ed]',
+    hover:       'hover:bg-[rgba(99,179,237,0.05)]',
+    deleteHover: 'hover:text-[#63b3ed]',
   },
 }
 
@@ -190,8 +196,8 @@ export default function NotificationBell({ role }: NotificationBellProps) {
           <div className="px-4 py-3 flex items-center justify-between shrink-0"
             style={{ background: theme.header }}>
             <div className="flex items-center gap-2">
-              <BellIcon size={14} color="#d4a843" />
-              <span className="text-[#d4a843] text-xs font-mono uppercase tracking-wider">
+              <BellIcon size={14} color={theme.headerText} />
+              <span className="text-xs font-mono uppercase tracking-wider" style={{ color: theme.headerText }}>
                 Notifications
               </span>
               {unreadCount > 0 && (
@@ -203,7 +209,8 @@ export default function NotificationBell({ role }: NotificationBellProps) {
             </div>
             {unreadCount > 0 && (
               <button onClick={markAllRead} disabled={loading}
-                className="text-[10px] font-mono text-[#d4a843] underline opacity-80 hover:opacity-100 disabled:opacity-40 transition-opacity">
+                className="text-[10px] font-mono underline opacity-80 hover:opacity-100 disabled:opacity-40 transition-opacity"
+                style={{ color: theme.headerText }}>
                 Mark all read
               </button>
             )}
@@ -212,7 +219,7 @@ export default function NotificationBell({ role }: NotificationBellProps) {
           {/* Notification list */}
           <div className="flex-1 overflow-y-auto divide-y divide-[#f0e9d6]">
             {notifications.length === 0 ? (
-              <div className="py-10 text-center">
+              <div className="py-10 flex flex-col items-center justify-center text-center">
                 <BellIcon size={28} color="#c8b89a" />
                 <p className="text-[#a89880] text-xs font-mono mt-2">No notifications yet</p>
               </div>
@@ -232,7 +239,7 @@ export default function NotificationBell({ role }: NotificationBellProps) {
                       {n.title}
                     </p>
                     <button onClick={e => deleteNotif(e, n._id, n.read)}
-                      className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[#c8b89a] hover:text-[#c0392b] ml-1 mt-0.5">
+                      className={`shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[#c8b89a] ${theme.deleteHover} ml-1 mt-0.5`}>
                       <IconClose size={11} color="currentColor" />
                     </button>
                   </div>
