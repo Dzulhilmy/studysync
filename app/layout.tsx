@@ -4,6 +4,7 @@ import './globals.css'
 import { Providers } from './providers'
 import AccessibilityMenu from '@/components/AccessibilityMenu'; // 1. IMPORT IT HERE
 import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const quicksand = Quicksand({
   subsets: ['latin'],
@@ -36,6 +37,7 @@ export default function RootLayout({
         <Providers>{children}</Providers>
         <AccessibilityMenu />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
