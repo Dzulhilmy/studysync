@@ -63,13 +63,10 @@ interface SubjectGroup { _id: string; name: string; code: string; projects: Proj
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-// Returns true when the deadline has already passed
 function isOverdue(deadline: string) {
-  const d = new Date(deadline)
-  d.setHours(0, 0, 0, 0)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return d < today
+  const d = new Date(deadline); d.setHours(0, 0, 0, 0)
+  const t = new Date();         t.setHours(0, 0, 0, 0)
+  return d < t
 }
 
 function fmt(iso: string | null) {
@@ -85,18 +82,13 @@ function VersionsModal({ project, onClose }: { project: Project; onClose: () => 
   const sorted = [...(sub.versions ?? [])].sort((a, b) => b.version - a.version)
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-      onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white border border-[#c8b89a] rounded-sm shadow-[6px_6px_0_#c8b89a] w-full max-w-lg max-h-[80vh] flex flex-col"
         onClick={e => e.stopPropagation()}>
         <div className="bg-[#1a2535] px-5 py-4 flex items-center justify-between shrink-0">
           <div>
-            <div className="text-[#63b3ed] font-bold text-sm" style={{ fontFamily: 'Georgia, serif' }}>
-              Version History
-            </div>
-            <div className="text-[rgba(250,246,238,0.45)] text-[11px] font-mono mt-0.5 truncate max-w-[320px]">
-              {project.title}
-            </div>
+            <div className="text-[#63b3ed] font-bold text-sm" style={{ fontFamily: 'Georgia, serif' }}>Version History</div>
+            <div className="text-[rgba(250,246,238,0.45)] text-[11px] font-mono mt-0.5 truncate max-w-[320px]">{project.title}</div>
           </div>
           <button onClick={onClose} className="text-[rgba(250,246,238,0.35)] hover:text-white transition-colors">
             <IconClose size={15} color="currentColor" />
@@ -107,31 +99,15 @@ function VersionsModal({ project, onClose }: { project: Project; onClose: () => 
             <p className="text-center py-8 text-[#7a6a52] text-sm">No version history yet.</p>
           ) : sorted.map(v => (
             <div key={v.version}
-              className={`border rounded-sm overflow-hidden ${
-                v.version === sub.currentVersion
-                  ? 'border-[#63b3ed] bg-[rgba(99,179,237,0.03)]'
-                  : 'border-[#e8dfc8] bg-white opacity-80'
-              }`}>
-              <div className={`px-4 py-2.5 flex items-center justify-between ${
-                v.version === sub.currentVersion ? 'bg-[rgba(99,179,237,0.08)]' : 'bg-[#faf6ee]'
-              }`}>
+              className={`border rounded-sm overflow-hidden ${v.version === sub.currentVersion ? 'border-[#63b3ed] bg-[rgba(99,179,237,0.03)]' : 'border-[#e8dfc8] bg-white opacity-80'}`}>
+              <div className={`px-4 py-2.5 flex items-center justify-between ${v.version === sub.currentVersion ? 'bg-[rgba(99,179,237,0.08)]' : 'bg-[#faf6ee]'}`}>
                 <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
-                    v.version === sub.currentVersion
-                      ? 'text-[#63b3ed] bg-[rgba(99,179,237,0.12)] border-[rgba(99,179,237,0.3)]'
-                      : 'text-[#7a6a52] bg-[#f0e9d6] border-[#c8b89a]'
-                  }`}>V{v.version}</span>
-                  {v.version === sub.currentVersion && (
-                    <span className="text-[10px] font-mono text-[#63b3ed]">Current</span>
-                  )}
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${v.version === sub.currentVersion ? 'text-[#63b3ed] bg-[rgba(99,179,237,0.12)] border-[rgba(99,179,237,0.3)]' : 'text-[#7a6a52] bg-[#f0e9d6] border-[#c8b89a]'}`}>V{v.version}</span>
+                  {v.version === sub.currentVersion && <span className="text-[10px] font-mono text-[#63b3ed]">Current</span>}
                   {v.isLate && <span className="text-[10px] font-mono text-[#c0392b]">🕐 Late</span>}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
-                    v.status === 'graded'
-                      ? 'text-[#1a7a6e] bg-[rgba(26,122,110,0.06)] border-[rgba(26,122,110,0.25)]'
-                      : 'text-[#8b5a2b] bg-[rgba(139,90,43,0.06)] border-[rgba(139,90,43,0.2)]'
-                  }`}>
+                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${v.status === 'graded' ? 'text-[#1a7a6e] bg-[rgba(26,122,110,0.06)] border-[rgba(26,122,110,0.25)]' : 'text-[#8b5a2b] bg-[rgba(139,90,43,0.06)] border-[rgba(139,90,43,0.2)]'}`}>
                     {v.status === 'graded' ? '✓ Graded' : '⟳ Submitted'}
                   </span>
                   <span className="text-[11px] font-mono text-[#7a6a52]">{fmt(v.submittedAt)}</span>
@@ -169,14 +145,12 @@ function VersionsModal({ project, onClose }: { project: Project; onClose: () => 
 
 // ── Messages Panel ────────────────────────────────────────────────────────────
 
-function MessagesPanel({
-  submissionId, messages: init, onNewMessage,
-}: {
+function MessagesPanel({ submissionId, messages: init, onNewMessage }: {
   submissionId: string; messages: Message[]; onNewMessage: () => void
 }) {
   const [messages, setMessages] = useState(init)
-  const [text,     setText]     = useState('')
-  const [sending,  setSending]  = useState(false)
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { setMessages(init) }, [init])
@@ -203,15 +177,9 @@ function MessagesPanel({
         <div className="space-y-1.5 max-h-44 overflow-y-auto mb-2 pr-0.5">
           {messages.map(m => (
             <div key={m._id} className={`flex ${m.senderRole === 'student' ? 'flex-row-reverse' : ''}`}>
-              <div className={`max-w-[82%] rounded-sm px-2.5 py-1.5 text-xs ${
-                m.senderRole === 'teacher'
-                  ? 'bg-[#f0e9d6] text-[#1a1209] border border-[#c8b89a]'
-                  : 'bg-[rgba(99,179,237,0.09)] text-[#1a1209] border border-[rgba(99,179,237,0.28)]'
-              }`}>
+              <div className={`max-w-[82%] rounded-sm px-2.5 py-1.5 text-xs ${m.senderRole === 'teacher' ? 'bg-[#f0e9d6] text-[#1a1209] border border-[#c8b89a]' : 'bg-[rgba(99,179,237,0.09)] text-[#1a1209] border border-[rgba(99,179,237,0.28)]'}`}>
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className={`text-[9px] font-mono font-bold uppercase ${
-                    m.senderRole === 'teacher' ? 'text-[#8b5a2b]' : 'text-[#2b6cb0]'
-                  }`}>{m.senderName}</span>
+                  <span className={`text-[9px] font-mono font-bold uppercase ${m.senderRole === 'teacher' ? 'text-[#8b5a2b]' : 'text-[#2b6cb0]'}`}>{m.senderName}</span>
                   <span className="text-[9px] font-mono text-[#a89880]">{fmt(m.createdAt)}</span>
                 </div>
                 <p className="leading-relaxed">{m.content}</p>
@@ -244,16 +212,11 @@ function VersionChips({ submission, onClick }: { submission: Submission; onClick
     <div className="flex items-center gap-1.5 flex-wrap mt-2">
       {versions.map(v => (
         <span key={v.version} onClick={onClick} title={`V${v.version} — ${fmt(v.submittedAt)}`}
-          className={`cursor-pointer text-[10px] font-mono font-bold px-2 py-0.5 border rounded transition-colors ${
-            v.version === submission.currentVersion
-              ? 'text-[#63b3ed] bg-[rgba(99,179,237,0.10)] border-[rgba(99,179,237,0.3)] hover:bg-[rgba(99,179,237,0.18)]'
-              : 'text-[#7a6a52] bg-[#f0e9d6] border-[#c8b89a] hover:bg-[#e8dfc8]'
-          }`}>
+          className={`cursor-pointer text-[10px] font-mono font-bold px-2 py-0.5 border rounded transition-colors ${v.version === submission.currentVersion ? 'text-[#63b3ed] bg-[rgba(99,179,237,0.10)] border-[rgba(99,179,237,0.3)] hover:bg-[rgba(99,179,237,0.18)]' : 'text-[#7a6a52] bg-[#f0e9d6] border-[#c8b89a] hover:bg-[#e8dfc8]'}`}>
           V{v.version}
         </span>
       ))}
-      <button onClick={onClick}
-        className="text-[10px] font-mono text-[#7a6a52] hover:text-[#63b3ed] underline transition-colors">
+      <button onClick={onClick} className="text-[10px] font-mono text-[#7a6a52] hover:text-[#63b3ed] underline transition-colors">
         See all versions
       </button>
     </div>
@@ -312,52 +275,75 @@ export default function StudentProjectsPage() {
     })
   }
 
+  // ── Submit handler — always POST ──────────────────────────────────────────
+  // The API route handles both create and update via findOne + upsert logic.
+  // There is no PATCH on this endpoint — POST covers everything.
   async function handleSubmit(isDraft: boolean) {
     if (!activeProject) return
     setError('')
     if (isDraft) setSavingDraft(true); else setSubmitting(true)
+
     try {
-      const existing = activeProject.submission
-      const body = { projectId: activeProject._id, fileUrl: formFileUrl, textResponse: formText, isDraft }
-      let res: Response
-      if (existing) {
-        res = await fetch('/api/student/submissions', {
-          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ submissionId: existing._id, ...body }),
-        })
-      } else {
-        res = await fetch('/api/student/submissions', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        })
-      }
+      const res = await fetch('/api/student/submissions', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          projectId:    activeProject._id,
+          fileUrl:      formFileUrl  || null,
+          textResponse: formText     || null,
+          isDraft,
+        }),
+      })
+
+      // Safely parse response — server may return non-JSON on errors
       const contentType = res.headers.get('content-type') ?? ''
       const data = contentType.includes('application/json') ? await res.json() : null
-      if (!res.ok) { setError(data?.error ?? `Server error (${res.status}).`); return }
-      setActiveProject(null); load()
+
+      if (!res.ok) {
+        setError(data?.error ?? `Server error (${res.status}). Please try again.`)
+        return
+      }
+
+      setActiveProject(null)
+      load()
     } catch (err) {
       console.error('[handleSubmit]', err)
       setError('Could not reach the server. Please check your connection.')
-    } finally { setSavingDraft(false); setSubmitting(false) }
+    } finally {
+      setSavingDraft(false)
+      setSubmitting(false)
+    }
   }
 
+  // ── Remove submission ─────────────────────────────────────────────────────
   async function handleDelete(submissionId: string) {
     if (!confirm('Remove this submission?')) return
-    await fetch('/api/student/submissions', {
-      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ submissionId }),
-    })
-    setActiveProject(null); load()
+    try {
+      const res = await fetch('/api/student/submissions', {
+        method:  'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ submissionId }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(data?.error ?? 'Could not remove submission.')
+        return
+      }
+    } catch {
+      setError('Network error. Please try again.')
+      return
+    }
+    setActiveProject(null)
+    load()
   }
 
-  // Warning strip: redo requests + projects due within 5 days that aren't submitted
+  // Warning strip: redo requests + projects due within 7 days not yet submitted
   const allProjects = subjects.flatMap(s => s.projects)
   const warnings = allProjects.filter(p => {
     if (p.submission?.redoRequested) return true
     const sub = p.submission
     if (sub && (sub.status === 'submitted' || sub.status === 'graded')) return false
     const dl = getDaysLeft(p.deadline)
-    // amber or red = within 7 days (threshold from dateUtils) and not overdue
     return !isOverdue(p.deadline) && (dl.color === '#d4a843' || dl.color === '#c0392b')
   })
 
@@ -375,7 +361,7 @@ export default function StudentProjectsPage() {
       </div>
       <RealTimeClock accentColor="#63b3ed" />
 
-      {/* ── Deadline / Redo Warnings ── */}
+      {/* ── Warning strip ── */}
       {warnings.length > 0 && (
         <div className="mt-4 mb-5 space-y-2">
           {warnings.map(p => {
@@ -383,11 +369,7 @@ export default function StudentProjectsPage() {
             const dl     = getDaysLeft(p.deadline)
             return (
               <div key={p._id}
-                className={`flex items-center gap-3 rounded-sm px-4 py-2.5 border ${
-                  isRedo
-                    ? 'bg-[rgba(192,57,43,0.05)] border-[rgba(192,57,43,0.35)]'
-                    : 'bg-[rgba(212,168,67,0.07)] border-[rgba(212,168,67,0.4)]'
-                }`}>
+                className={`flex items-center gap-3 rounded-sm px-4 py-2.5 border ${isRedo ? 'bg-[rgba(192,57,43,0.05)] border-[rgba(192,57,43,0.35)]' : 'bg-[rgba(212,168,67,0.07)] border-[rgba(212,168,67,0.4)]'}`}>
                 <IconWarning size={17} color={isRedo ? '#c0392b' : dl.color} />
                 <span className="text-sm flex-1" style={{ color: isRedo ? '#8b2020' : '#8b5a2b' }}>
                   {isRedo
@@ -414,8 +396,7 @@ export default function StudentProjectsPage() {
                 <h2 className="text-[#63b3ed] font-bold" style={{ fontFamily: 'Georgia, serif' }}>
                   {activeProject.submission?.redoRequested
                     ? `Submit Revision — V${(activeProject.submission.currentVersion ?? 1) + 1}`
-                    : activeProject.submission ? 'Update Submission' : 'Submit Project'
-                  }
+                    : activeProject.submission ? 'Update Submission' : 'Submit Project'}
                 </h2>
                 {activeProject.submission?.redoRequested && (
                   <p className="text-[rgba(250,246,238,0.4)] text-[11px] font-mono mt-0.5">
@@ -431,9 +412,7 @@ export default function StudentProjectsPage() {
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {/* Project info */}
               <div className="p-3 bg-[#faf6ee] border border-[#c8b89a] rounded-sm">
-                <div className="font-bold text-[#1a1209] text-sm" style={{ fontFamily: 'Georgia, serif' }}>
-                  {activeProject.title}
-                </div>
+                <div className="font-bold text-[#1a1209] text-sm" style={{ fontFamily: 'Georgia, serif' }}>{activeProject.title}</div>
                 {(() => {
                   const dl = getDaysLeft(activeProject.deadline)
                   return (
@@ -448,17 +427,13 @@ export default function StudentProjectsPage() {
                     </div>
                   )
                 })()}
-                {activeProject.description && (
-                  <p className="text-xs text-[#7a6a52] mt-1">{activeProject.description}</p>
-                )}
+                {activeProject.description && <p className="text-xs text-[#7a6a52] mt-1">{activeProject.description}</p>}
               </div>
 
-              {/* Redo reason banner */}
+              {/* Redo reason */}
               {activeProject.submission?.redoRequested && (
                 <div className="p-3 bg-[rgba(192,57,43,0.05)] border border-[rgba(192,57,43,0.25)] rounded-sm">
-                  <div className="text-xs font-mono text-[#c0392b] uppercase tracking-wider mb-1">
-                    🔄 Revision Requested by Teacher
-                  </div>
+                  <div className="text-xs font-mono text-[#c0392b] uppercase tracking-wider mb-1">🔄 Revision Requested by Teacher</div>
                   <p className="text-sm text-[#1a1209]">
                     {activeProject.submission.redoReason || 'Your teacher has requested you revise and resubmit this project.'}
                   </p>
@@ -468,9 +443,7 @@ export default function StudentProjectsPage() {
               {/* Previous feedback */}
               {activeProject.submission?.feedback && (
                 <div className="p-3 bg-[rgba(26,122,110,0.05)] border border-[rgba(26,122,110,0.2)] rounded-sm">
-                  <div className="text-xs font-mono text-[#1a7a6e] uppercase tracking-wider mb-1">
-                    Previous Teacher Feedback
-                  </div>
+                  <div className="text-xs font-mono text-[#1a7a6e] uppercase tracking-wider mb-1">Previous Teacher Feedback</div>
                   <p className="text-sm text-[#1a1209]">{activeProject.submission.feedback}</p>
                 </div>
               )}
@@ -483,7 +456,7 @@ export default function StudentProjectsPage() {
 
               <div>
                 <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1.5">Attach File</label>
-                <FileUpload value={formFileUrl} onChange={(url) => setFormFileUrl(url)}
+                <FileUpload value={formFileUrl} onChange={url => setFormFileUrl(url)}
                   accentColor="#63b3ed" inputId="submission-file-upload" />
               </div>
 
@@ -494,9 +467,7 @@ export default function StudentProjectsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">
-                  Google Drive / OneDrive Link
-                </label>
+                <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">Google Drive / OneDrive Link</label>
                 <input value={formFileUrl} onChange={e => setFormFileUrl(e.target.value)}
                   placeholder="https://drive.google.com/..."
                   className="w-full border border-[#c8b89a] px-3 py-2 text-sm rounded-sm focus:outline-none focus:border-[#63b3ed]" />
@@ -504,9 +475,7 @@ export default function StudentProjectsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">
-                  Notes / Text Response (optional)
-                </label>
+                <label className="block text-xs font-mono text-[#7a6a52] uppercase tracking-wider mb-1">Notes / Text Response (optional)</label>
                 <textarea value={formText} onChange={e => setFormText(e.target.value)} rows={3}
                   placeholder="Add any notes for your teacher..."
                   className="w-full border border-[#c8b89a] px-3 py-2 text-sm rounded-sm focus:outline-none focus:border-[#63b3ed] resize-none" />
@@ -515,13 +484,17 @@ export default function StudentProjectsPage() {
 
             <div className="shrink-0 px-6 pb-5 space-y-2">
               <div className="flex gap-2 flex-wrap">
-                {activeProject.submission && activeProject.submission.status !== 'graded' && !activeProject.submission.redoRequested && (
+                {/* Remove button — only for non-graded, non-redo submissions */}
+                {activeProject.submission &&
+                  activeProject.submission.status !== 'graded' &&
+                  !activeProject.submission.redoRequested && (
                   <button onClick={() => handleDelete(activeProject.submission!._id)}
                     className="text-xs px-3 py-2 border border-[rgba(192,57,43,0.3)] text-[#c0392b] rounded-sm hover:bg-[rgba(192,57,43,0.08)] transition-colors flex items-center gap-1">
                     <IconTrash size={13} color="currentColor" /> Remove
                   </button>
                 )}
                 <div className="flex gap-2 ml-auto">
+                  {/* Save Draft — hidden when redo is pending (must submit, not save draft) */}
                   {!activeProject.submission?.redoRequested && (
                     <button onClick={() => handleSubmit(true)} disabled={savingDraft || submitting}
                       className="text-xs px-4 py-2 border border-[#c8b89a] text-[#7a6a52] hover:bg-[#faf6ee] rounded-sm disabled:opacity-50 transition-colors flex items-center gap-1">
@@ -533,10 +506,7 @@ export default function StudentProjectsPage() {
                     className="text-xs px-4 py-2 bg-[#1a2535] text-[#63b3ed] border border-[rgba(99,179,237,0.3)] rounded-sm hover:bg-[#243040] disabled:opacity-50 transition-colors font-semibold">
                     {submitting
                       ? 'Submitting…'
-                      : activeProject.submission?.redoRequested
-                        ? '📤 Submit Revision'
-                        : '📤 Submit'
-                    }
+                      : activeProject.submission?.redoRequested ? '📤 Submit Revision' : '📤 Submit'}
                   </button>
                 </div>
               </div>
@@ -551,9 +521,7 @@ export default function StudentProjectsPage() {
       )}
 
       {/* ── Versions Modal ── */}
-      {versionProject && (
-        <VersionsModal project={versionProject} onClose={() => setVersionProject(null)} />
-      )}
+      {versionProject && <VersionsModal project={versionProject} onClose={() => setVersionProject(null)} />}
 
       {/* ── Teacher Feedback Modal ── */}
       {commentProject && (
@@ -562,9 +530,7 @@ export default function StudentProjectsPage() {
             <div className="bg-[#1a2535] px-5 py-3.5 flex items-center justify-between">
               <div>
                 <h2 className="text-[#63b3ed] font-bold text-sm" style={{ fontFamily: 'Georgia, serif' }}>Teacher Feedback</h2>
-                <p className="text-[rgba(250,246,238,0.4)] text-[10px] font-mono mt-0.5 truncate max-w-[220px]">
-                  {commentProject.title}
-                </p>
+                <p className="text-[rgba(250,246,238,0.4)] text-[10px] font-mono mt-0.5 truncate max-w-[220px]">{commentProject.title}</p>
               </div>
               <button onClick={() => setCommentProject(null)}
                 className="text-[rgba(250,246,238,0.4)] hover:text-white p-1 rounded-sm transition-colors">
@@ -605,7 +571,7 @@ export default function StudentProjectsPage() {
             {subject.projects.map(project => {
               const sub       = project.submission
               const subStatus = sub?.redoRequested ? 'redo_requested' : (sub?.status ?? 'none')
-              const dl        = getDaysLeft(project.deadline)   // ← single source of truth
+              const dl        = getDaysLeft(project.deadline)
               const overdue   = isOverdue(project.deadline)
               const leftBadge = LEFT_BADGE[subStatus]
               const msgCount  = sub?.messages?.length ?? 0
@@ -615,8 +581,8 @@ export default function StudentProjectsPage() {
               return (
                 <div key={project._id}
                   className={`bg-white border rounded-sm p-5 shadow-[3px_3px_0_#c8b89a] transition-all hover:shadow-[4px_4px_0_#c8b89a] ${
-                    sub?.redoRequested     ? 'border-[rgba(212,168,67,0.55)]' :
-                    overdue && !sub        ? 'border-[rgba(192,57,43,0.4)]'  :
+                    sub?.redoRequested ? 'border-[rgba(212,168,67,0.55)]' :
+                    overdue && !sub   ? 'border-[rgba(192,57,43,0.4)]'   :
                     'border-[#c8b89a]'
                   }`}>
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
@@ -636,12 +602,8 @@ export default function StudentProjectsPage() {
                         )}
                       </div>
 
-                      <h3 className="font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>
-                        {project.title}
-                      </h3>
-                      {project.description && (
-                        <p className="text-xs text-[#7a6a52] mt-0.5 line-clamp-1">{project.description}</p>
-                      )}
+                      <h3 className="font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>{project.title}</h3>
+                      {project.description && <p className="text-xs text-[#7a6a52] mt-0.5 line-clamp-1">{project.description}</p>}
 
                       {/* Redo reason */}
                       {sub?.redoRequested && sub.redoReason && (
@@ -652,7 +614,7 @@ export default function StudentProjectsPage() {
                         </div>
                       )}
 
-                      {/* ── Deadline row — colour-coded via getDaysLeft ── */}
+                      {/* Deadline */}
                       <div className="flex flex-wrap gap-3 mt-2 text-xs font-mono items-center">
                         <span className="flex items-center gap-1 font-semibold" style={{ color: dl.color }}>
                           <IconCalendar size={12} color={dl.color} />
@@ -667,11 +629,9 @@ export default function StudentProjectsPage() {
                       </div>
 
                       {/* Version chips */}
-                      {versCount > 0 && sub && (
-                        <VersionChips submission={sub} onClick={() => setVersionProject(project)} />
-                      )}
+                      {versCount > 0 && sub && <VersionChips submission={sub} onClick={() => setVersionProject(project)} />}
 
-                      {/* Actions row */}
+                      {/* Actions */}
                       <div className="flex items-center gap-2 mt-2 flex-wrap">
                         {sub?.feedback && (
                           <button onClick={() => setCommentProject(project)}
@@ -687,11 +647,7 @@ export default function StudentProjectsPage() {
                         )}
                         {sub && (
                           <button onClick={() => toggleMessages(project._id)}
-                            className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 border rounded-sm transition-colors font-mono ${
-                              isOpen
-                                ? 'border-[rgba(99,179,237,0.4)] text-[#63b3ed] bg-[rgba(99,179,237,0.09)]'
-                                : 'border-[#c8b89a] text-[#7a6a52] hover:border-[rgba(99,179,237,0.4)] hover:text-[#63b3ed]'
-                            }`}>
+                            className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 border rounded-sm transition-colors font-mono ${isOpen ? 'border-[rgba(99,179,237,0.4)] text-[#63b3ed] bg-[rgba(99,179,237,0.09)]' : 'border-[#c8b89a] text-[#7a6a52] hover:border-[rgba(99,179,237,0.4)] hover:text-[#63b3ed]'}`}>
                             💬 Messages
                             {msgCount > 0 && (
                               <span className="ml-0.5 text-[10px] bg-[#63b3ed] text-white rounded-full w-4 h-4 flex items-center justify-center font-bold">
@@ -707,7 +663,7 @@ export default function StudentProjectsPage() {
                       )}
                     </div>
 
-                    {/* Right-side action button */}
+                    {/* Right-side buttons */}
                     <div className="flex flex-col gap-1.5 shrink-0">
                       {subStatus === 'graded' && !sub?.redoRequested ? (
                         <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 border border-[rgba(26,122,110,0.3)] text-[#1a7a6e] bg-[rgba(26,122,110,0.06)] rounded-sm font-mono">
