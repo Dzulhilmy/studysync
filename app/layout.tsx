@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { Quicksand } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
-import AccessibilityMenu from '@/components/AccessibilityMenu'; // 1. IMPORT IT HERE
+import AccessibilityMenu from '@/components/AccessibilityMenu';
+import ScrollToTop from '@/components/ScrollToTop';
 import { Analytics } from "@vercel/analytics/next"
 
 const quicksand = Quicksand({
@@ -34,6 +35,7 @@ export default function RootLayout({
       </head>
       <body className={`${quicksand.variable} font-sans bg-parchment text-ink`} suppressHydrationWarning>
         <Providers>{children}</Providers>
+        <ScrollToTop />
         <AccessibilityMenu />
         <Analytics />
       </body>
