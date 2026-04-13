@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import FileUpload from '@/components/FileUpload'
+import FilePreviewButton from '@/components/FilePreviewButton'
 import RealTimeClock from '@/components/RealTimeClock'
 import  Link  from 'next/link'
 import { IconAdd } from '@/components/NavIcons'
@@ -340,17 +341,22 @@ export default function TeacherSubjectsPage() {
                                   </a>
                                 )}
                                 {m.fileUrl && (
-                                  <a href={m.fileUrl} target="_blank" rel="noreferrer"
-                                    className="inline-flex items-center gap-1 text-[10px] font-mono text-[#8b5a2b] border border-[rgba(139,90,43,0.25)] bg-[rgba(139,90,43,0.05)] px-2 py-0.5 rounded-sm hover:bg-[rgba(139,90,43,0.1)] transition-colors">
-                                    📎 File ↗
-                                  </a>
+                                  <FilePreviewButton
+                                    url={m.fileUrl}
+                                    fileName={m.title}
+                                    label="material"
+                                    accentColor="#8b5a2b"
+                                    compact
+                                  />
                                 )}
                                 {/* Fallback for old materials that only have url */}
                                 {!m.linkUrl && !m.fileUrl && m.url && (
-                                  <a href={m.url} target="_blank" rel="noreferrer"
-                                    className="inline-flex items-center gap-1 text-[10px] font-mono text-[#1a7a6e] border border-[rgba(26,122,110,0.25)] bg-[rgba(26,122,110,0.05)] px-2 py-0.5 rounded-sm hover:bg-[rgba(26,122,110,0.1)] transition-colors">
-                                    ↗ Open
-                                  </a>
+                                  <FilePreviewButton
+                                    url={m.url}
+                                    fileName={m.title}
+                                    accentColor="#1a7a6e"
+                                    compact
+                                  />
                                 )}
                               </div>
                             </div>

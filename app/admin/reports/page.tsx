@@ -9,10 +9,18 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+const WEEKS = [
+  { label: 'Week 1', range: '1st – 7th' },
+  { label: 'Week 2', range: '8th – 14th' },
+  { label: 'Week 3', range: '15th – 21st' },
+  { label: 'Week 4', range: '22nd – End' },
+];
+
 interface Report {
   _id: string;
   month: number;
   year: number;
+  week?: number;
   teacherName: string;
   teacherEmail: string;
   submittedAt: string;
@@ -92,6 +100,218 @@ function buildRows(report: Report, type: BreakdownType): BreakdownRow[] {
       };
     })
   ).filter((r) => r.count > 0);
+}
+
+// ── Full Document Detail Modal (──────────────────────────────────────────────
+function ReportDetailModal({ report, onClose }: { report: Report; onClose: () => void }) {
+  const weekLabel = report.week ? WEEKS[(report.week as number) - 1]?.label : null
+  const periodLabel = weekLabel
+    ? `${weekLabel} · ${MONTHS[report.month - 1]} ${report.year}`
+    : `${MONTHS[report.month - 1]} ${report.year}`
+
+  const subRate  = report.summary.totalSubmissions > 0
+    ? Math.round((report.summary.gradedSubmissions / report.summary.totalSubmissions) * 100) : 0
+  const lateRate = report.summary.totalSubmissions > 0
+    ? Math.round((report.summary.lateSubmissions / report.summary.totalSubmissions) * 100) : 0
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-white border border-[#c8b89a] rounded-sm shadow-[8px_8px_0_#c8b89a] w-full max-w-4xl max-h-[92vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Modal header */}
+        <div className="bg-[#2c1810] px-6 py-4 flex items-center justify-between shrink-0">
+          <div>
+            <h2 className="text-[#d4a843] font-bold text-base" style={{ fontFamily: 'Georgia, serif' }}>
+              Weekly Teaching Report
+            </h2>
+            <p className="text-[rgba(250,246,238,0.5)] text-[11px] font-mono mt-0.5">
+              {periodLabel} · {report.teacherName}
+            </p>
+          </div>
+          <button onClick={onClose}
+            className="text-[rgba(250,246,238,0.4)] hover:text-white transition-colors p-1.5">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M3 3L15 15M15 3L3 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Modal body — scrollable */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+          {/* Teacher info row */}
+          <div className="grid grid-cols-3 gap-4 bg-[#faf7f2] border border-[#e8dfc8] p-4">
+            {[{ label: 'Teacher', value: report.teacherName },
+              { label: 'Email', value: report.teacherEmail },
+              { label: 'Report Period', value: periodLabel }].map(c => (
+              <div key={c.label}>
+                <div className="text-[10px] font-mono text-[#7a6a52] uppercase tracking-wider mb-1">{c.label}</div>
+                <div className="text-sm font-semibold text-[#1a1209]">{c.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* KPI grid */}
+          <div>
+            <p className="text-[10px] font-mono text-[#7a6a52] uppercase tracking-wider mb-3">Summary Overview</p>
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                { icon: '📚', num: report.summary.totalSubjects,    label: 'Subjects Taught' },
+                { icon: '👥', num: report.summary.totalStudents,    label: 'Total Students'  },
+                { icon: '📋', num: report.summary.totalProjects,    label: 'Active Projects' },
+                { icon: '🏆', num: report.summary.avgGrade != null ? `${report.summary.avgGrade}` : '—', label: 'Avg Grade (pts)' },
+              ].map(k => (
+                <div key={k.label} className="bg-[#faf7f2] border border-[#e8dfc8] p-4 text-center relative overflow-hidden">
+                  <div className="text-xl mb-1">{k.icon}</div>
+                  <div className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: 'Georgia, serif' }}>{k.num}</div>
+                  <div className="text-[10px] font-mono text-[#7a6a52] uppercase tracking-wider mt-0.5">{k.label}</div>
+                  <div className="absolute bottom-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(90deg,#d4a843,transparent)' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Metrics bars */}
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: 'Submission Rate',  val: report.summary.totalSubmissions,  pct: subRate,  note: `${subRate}% graded`,        color: '#1a5c54' },
+              { label: 'Late Submissions', val: report.summary.lateSubmissions,   pct: lateRate, note: `${lateRate}% of total`,     color: lateRate > 20 ? '#8b2020' : '#1a5c54' },
+              { label: 'Graded Work',      val: report.summary.gradedSubmissions, pct: subRate,  note: `of ${report.summary.totalSubmissions}`, color: '#1a5c54' },
+            ].map(m => (
+              <div key={m.label} className="bg-[#f5f0e8] border border-[#e8dfc8] p-3">
+                <div className="text-[10px] font-mono text-[#7a6a52] uppercase tracking-wider mb-2">{m.label}</div>
+                <div className="h-1.5 bg-[#d4c4a8] rounded-full overflow-hidden mb-2">
+                  <div className="h-full rounded-full transition-all" style={{ width: `${m.pct}%`, background: m.color }} />
+                </div>
+                <span className="text-xl font-bold" style={{ fontFamily: 'Georgia, serif', color: m.color }}>{m.val}</span>
+                <span className="text-[10px] font-mono text-[#7a6a52] ml-1">{m.note}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Student submission breakdown */}
+          <div className="bg-[#faf7f2] border border-[#e8dfc8] p-4">
+            <p className="text-[10px] font-mono text-[#7a6a52] uppercase tracking-wider mb-3">Student Submission Breakdown</p>
+            {(() => {
+              const s = report.summary;
+              const onTime = Math.max(0, s.totalSubmissions - s.lateSubmissions);
+              const late   = s.lateSubmissions;
+              const notSub = s.notSubmitted ?? Math.max(0, (s.totalStudents * s.totalProjects) - s.totalSubmissions);
+              const total  = onTime + late + notSub || 1;
+              return (
+                <>
+                  <div className="flex h-2 rounded-full overflow-hidden mb-3 bg-[#e8dfc8]">
+                    <div style={{ width: `${(onTime / total) * 100}%` }} className="bg-[#1a7a6e]" />
+                    <div style={{ width: `${(late   / total) * 100}%` }} className="bg-[#d4a843]" />
+                    <div style={{ width: `${(notSub / total) * 100}%` }} className="bg-[#c0392b] opacity-60" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { label: 'On Time',       value: onTime, color: '#1a7a6e', dot: 'bg-[#1a7a6e]' },
+                      { label: 'Late',          value: late,   color: '#8b5a2b', dot: 'bg-[#d4a843]' },
+                      { label: 'Not Submitted', value: notSub, color: '#c0392b', dot: 'bg-[#c0392b] opacity-60' },
+                    ].map(st => (
+                      <div key={st.label} className="text-center p-3 bg-white border border-[#e8dfc8]">
+                        <div className="flex items-center justify-center gap-1.5 mb-1">
+                          <span className={`w-2 h-2 rounded-full inline-block ${st.dot}`} />
+                          <span className="text-[10px] font-mono text-[#7a6a52] uppercase tracking-wider">{st.label}</span>
+                        </div>
+                        <div className="text-2xl font-bold" style={{ fontFamily: 'Georgia, serif', color: st.color }}>{st.value}</div>
+                        <div className="text-[10px] font-mono text-[#a89880]">{Math.round((st.value / total) * 100)}%</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Subject & project breakdown */}
+          <div>
+            <p className="text-[10px] font-mono text-[#7a6a52] uppercase tracking-wider mb-3">Subject &amp; Project Breakdown</p>
+            <div className="space-y-4">
+              {report.subjects.map(subj => (
+                <div key={subj.subjectId} className="border border-[#e8dfc8] overflow-hidden">
+                  <div className="bg-[#1a1209] text-white px-4 py-3 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-mono text-[#d4a843] tracking-widest">{subj.code}</span>
+                      <span className="text-sm font-bold ml-2" style={{ fontFamily: 'Georgia, serif' }}>{subj.name}</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-white/40">{subj.studentCount} students enrolled</span>
+                  </div>
+                  {subj.projects.length === 0 ? (
+                    <div className="px-4 py-3 bg-[#faf7f2]">
+                      <span className="text-[10px] font-mono text-[#a89880] uppercase tracking-wider">No projects recorded this period</span>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-[#f5f0e8]">
+                            {['Project Title','Deadline','Submitted','Graded','Late','Avg','High','Low'].map(h => (
+                              <th key={h} className="px-3 py-2 text-left font-mono text-[#7a6a52] uppercase tracking-wider border-b border-[#e8dfc8] whitespace-nowrap text-[10px]">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {subj.projects.map((p, i) => (
+                            <tr key={p.projectId} className={i % 2 === 0 ? 'bg-white' : 'bg-[#faf7f2]'}>
+                              <td className="px-3 py-2 font-semibold text-[#1a1209] max-w-[160px] truncate border-b border-[#f0e9d6]">{p.title}</td>
+                              <td className="px-3 py-2 font-mono text-[#7a6a52] whitespace-nowrap border-b border-[#f0e9d6]">{new Date(p.deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                              <td className="px-3 py-2 font-mono text-[#7a6a52] border-b border-[#f0e9d6]">{p.submitted}/{p.totalStudents}</td>
+                              <td className="px-3 py-2 font-mono font-bold text-[#1a7a6e] border-b border-[#f0e9d6]">{p.graded}</td>
+                              <td className={`px-3 py-2 font-mono border-b border-[#f0e9d6] ${p.late > 0 ? 'text-[#c0392b]' : 'text-[#7a6a52]'}`}>{p.late}</td>
+                              <td className="px-3 py-2 font-mono font-bold text-[#8b5a2b] border-b border-[#f0e9d6]">{p.avgGrade ?? '—'}</td>
+                              <td className="px-3 py-2 font-mono text-[#7a6a52] border-b border-[#f0e9d6]">{p.highestGrade ?? '—'}</td>
+                              <td className="px-3 py-2 font-mono text-[#7a6a52] border-b border-[#f0e9d6]">{p.lowestGrade ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Remarks */}
+          <div>
+            <p className="text-[10px] font-mono text-[#7a6a52] uppercase tracking-wider mb-2">Remarks &amp; Observations</p>
+            <div className="bg-[#faf7f2] border border-[#e8dfc8] p-4 min-h-[60px]">
+              {report.remarks
+                ? <p className="text-sm text-[#1a1209] leading-relaxed italic">{report.remarks}</p>
+                : <p className="text-[10px] font-mono text-[#c8b89a] uppercase tracking-wider">— No remarks provided —</p>
+              }
+            </div>
+          </div>
+
+          {/* Signature strip */}
+          <div className="grid grid-cols-3 gap-8 pt-2">
+            {[{ label: 'Prepared by', name: report.teacherName },
+              { label: 'Verified by', name: '' },
+              { label: 'Acknowledged by', name: '' }].map(s => (
+              <div key={s.label} className="border-t border-[#1a1209] pt-2">
+                <div className="text-[10px] font-mono text-[#7a6a52] uppercase tracking-wider">{s.label}</div>
+                <div className="text-sm text-[#1a1209] mt-1 italic">{s.name || <span className="opacity-0">_</span>}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Modal footer */}
+        <div className="px-6 py-3 border-t border-[#e8dfc8] flex items-center justify-between shrink-0 bg-[#faf7f2]">
+          <span className="text-[11px] font-mono text-[#7a6a52]">StudySync · Weekly Teaching Report · {periodLabel.toUpperCase()}</span>
+          <button onClick={onClose}
+            className="text-xs px-4 py-1.5 border border-[#c8b89a] text-[#7a6a52] hover:bg-white rounded-sm font-mono transition-colors">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Breakdown Modal ───────────────────────────────────────────────────────────
@@ -279,6 +499,7 @@ export default function AdminReportsPage() {
   const [selected,  setSelected]  = useState<Report | null>(null);
   const [loading,   setLoading]   = useState(true);
   const [breakdown, setBreakdown] = useState<BreakdownType | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/reports")
@@ -309,6 +530,11 @@ export default function AdminReportsPage() {
         />
       )}
 
+      {/* Full document detail modal */}
+      {showDetail && selected && (
+        <ReportDetailModal report={selected} onClose={() => setShowDetail(false)} />
+      )}
+
       <Link href="/admin"
         className="inline-flex items-center gap-2 text-xs font-mono text-[#4a3828] hover:text-[#1a1209] mb-6 group transition-colors">
         <span className="text-base leading-none group-hover:-translate-x-1 transition-transform inline-block">←</span>
@@ -317,8 +543,8 @@ export default function AdminReportsPage() {
 
       <div className="mb-6">
         
-        <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: "Georgia, serif" }}>Monthly Reports</h1>
-        <p className="text-[#7a6a52] text-sm mt-1">Review submitted monthly reports from all teachers.</p>
+        <h1 className="text-2xl font-bold text-[#1a1209]" style={{ fontFamily: "Georgia, serif" }}>Weekly Reports</h1>
+        <p className="text-[#7a6a52] text-sm mt-1">Review submitted weekly reports from all teachers.</p>
         <RealTimeClock accentColor="#d4a843" />
       </div>
 
@@ -384,14 +610,23 @@ export default function AdminReportsPage() {
             ) : (
               <div className="space-y-4">
                 {/* Actions */}
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
                   <h2 className="font-bold text-[#1a1209]" style={{ fontFamily: "Georgia, serif" }}>
+                    {selected.week ? (
+                      <span className="text-[11px] font-mono bg-[#2c1810] text-[#d4a843] px-2 py-0.5 mr-2">{WEEKS[(selected.week as number) - 1]?.label ?? `Week ${selected.week}`}</span>
+                    ) : null}
                     {MONTHS[selected.month - 1]} {selected.year} — {selected.teacherName}
                   </h2>
-                  <button onClick={() => handlePrint(selected)}
-                    className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c8b89a] text-[#1a1209] text-xs font-semibold rounded-sm hover:bg-[#faf6ee] shadow-[2px_2px_0_#c8b89a] transition-all">
-                    🖨️ Print / Save PDF
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setShowDetail(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-[#2c1810] border border-[rgba(212,168,67,0.35)] text-[#d4a843] text-xs font-semibold rounded-sm hover:bg-[#3d2010] shadow-[2px_2px_0_rgba(26,18,9,0.3)] transition-all">
+                      📄 View Details
+                    </button>
+                    <button onClick={() => handlePrint(selected)}
+                      className="flex items-center gap-2 px-4 py-2 bg-white border border-[#c8b89a] text-[#1a1209] text-xs font-semibold rounded-sm hover:bg-[#faf6ee] shadow-[2px_2px_0_#c8b89a] transition-all">
+                      🖨️ Print / Save PDF
+                    </button>
+                  </div>
                 </div>
 
                 {/* KPIs */}

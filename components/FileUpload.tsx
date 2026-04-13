@@ -14,6 +14,7 @@
 
 import { useRef, useState } from 'react'
 import { useUploadThing } from '@/lib/uploadthing'
+import FilePreviewButton from '@/components/FilePreviewButton'
 
 const ACCEPT_LABEL = 'PDF, DOCX, PPTX, XLSX, ODT, TXT, JPG, PNG'
 const MAX_MB = 16
@@ -161,18 +162,14 @@ export default function FileUpload({
         >
           <span className="text-xl shrink-0">📎</span>
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold text-[#1a1209] truncate">
+            <div className="text-xs font-semibold text-[#1a1209] truncate mb-1.5">
               {fileName || 'Attached file'}
             </div>
-            <a
-              href={value}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[10px] font-mono underline underline-offset-2 truncate block"
-              style={{ color: accentColor }}
-            >
-              View / Download ↗
-            </a>
+            <FilePreviewButton
+              url={value}
+              fileName={fileName || undefined}
+              accentColor={accentColor}
+            />
           </div>
           <button
             type="button"

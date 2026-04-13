@@ -6,9 +6,17 @@ import { useEffect, useState, Suspense } from 'react'
 const MONTHS = ['January','February','March','April','May','June',
                 'July','August','September','October','November','December']
 
+const WEEKS = [
+  { label: 'Week 1', range: '1st – 7th' },
+  { label: 'Week 2', range: '8th – 14th' },
+  { label: 'Week 3', range: '15th – 21st' },
+  { label: 'Week 4', range: '22nd – End' },
+]
+
 interface ReportData {
   month: number; year: number; status: string
   teacherName: string; teacherEmail: string; remarks: string
+  week?: number
   summary: {
     totalSubjects: number; totalStudents: number
     totalProjects: number; gradedSubmissions: number
@@ -482,9 +490,9 @@ function PrintPage() {
 
       {/* ── Screen top bar (hidden when printing) ── */}
       <div className="print-bar no-print">
-        <span className="print-bar-label">📋 Monthly Report Preview</span>
+        <span className="print-bar-label">📋 Weekly Report Preview</span>
         <button className="print-btn" onClick={() => window.print()}>
-          🖨 Print / Save as PDF
+          🖸 Print / Save as PDF
         </button>
       </div>
 
@@ -498,8 +506,10 @@ function PrintPage() {
               <div className="school-sub">Learning Management System</div>
             </div>
             <div className="doc-meta">
-              <div className="doc-type">Monthly Teaching Report</div>
-              <div className="doc-period">{MONTHS[report.month - 1].toUpperCase()} {report.year}</div>
+              <div className="doc-type">Weekly Teaching Report</div>
+              <div className="doc-period">
+                {report.week ? `${WEEKS[report.week - 1]?.label?.toUpperCase() ?? ''} · ` : ''}{MONTHS[report.month - 1].toUpperCase()} {report.year}
+              </div>
               {report.status === 'submitted' && (
                 <div className="doc-stamp">Submitted</div>
               )}
@@ -521,7 +531,9 @@ function PrintPage() {
             </div>
             <div className="info-cell">
               <label>Report Period</label>
-              <span>{MONTHS[report.month - 1]} {report.year}</span>
+              <span>
+                {report.week ? `${WEEKS[report.week - 1]?.label ?? ''} · ` : ''}{MONTHS[report.month - 1]} {report.year}
+              </span>
             </div>
           </div>
 
@@ -670,7 +682,7 @@ function PrintPage() {
           {/* ════════ FOOTER ════════ */}
           <div className="doc-footer">
             <span className="footer-left">
-              STUDYSYNC · MONTHLY TEACHING REPORT · {MONTHS[report.month - 1].toUpperCase()} {report.year}
+              STUDYSYNC · WEEKLY TEACHING REPORT{report.week ? ` · ${WEEKS[report.week - 1]?.label?.toUpperCase() ?? ''}` : ''} · {MONTHS[report.month - 1].toUpperCase()} {report.year}
             </span>
             <span className="footer-right">
               Generated {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}

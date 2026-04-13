@@ -2,6 +2,7 @@
 
 import { JSX, useEffect, useState } from 'react'
 import FileUpload from '@/components/FileUpload'
+import FilePreviewButton from '@/components/FilePreviewButton'
 import Link from 'next/link'
 import RealTimeClock from '@/components/RealTimeClock'
 import {
@@ -300,10 +301,13 @@ export default function AnnouncementsPage() {
                     <span><IconCalendar size={12} color="currentColor" /> {new Date(a.createdAt).toLocaleDateString()}</span>
                     <span><IconEye size={12} color="currentColor" /> {a.readBy?.length ?? 0} read</span>
                     {a.fileUrl && (
-                      <a href={a.fileUrl} target="_blank" rel="noreferrer"
-                        className="text-[#1a7a6e] hover:underline underline-offset-2">
-                        📎 {a.fileName || 'Attachment'} ↗
-                      </a>
+                      <FilePreviewButton
+                        url={a.fileUrl}
+                        fileName={a.fileName || undefined}
+                        label="attachment"
+                        accentColor="#1a7a6e"
+                        compact
+                      />
                     )}
                   </div>
                 </div>

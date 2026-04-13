@@ -2,6 +2,7 @@
 
 import { JSX, useEffect, useRef, useState } from 'react'
 import FileUpload from '@/components/FileUpload'
+import FilePreviewButton from '@/components/FilePreviewButton'
 import RealTimeClock from '@/components/RealTimeClock'
 import Link from 'next/link'
 import {
@@ -529,6 +530,19 @@ export default function TeacherProjectsPage() {
                       <span className="flex items-center gap-1"><IconSubmitted size={12} color="#7a6a52" /> {p.submitted}/{p.totalStudents} submitted</span>
                       <span className="flex items-center gap-1"><IconRefresh size={12} color="#7a6a52" /> {p.graded} graded</span>
                     </div>
+
+                    {/* Project reference attachment */}
+                    {p.fileUrl && (
+                      <div className="mt-2">
+                        <FilePreviewButton
+                          url={p.fileUrl}
+                          fileName={p.fileName || undefined}
+                          label="document"
+                          accentColor="#1a7a6e"
+                          compact
+                        />
+                      </div>
+                    )}
 
                     {p.totalStudents > 0 && (
                       <div className="mt-2">

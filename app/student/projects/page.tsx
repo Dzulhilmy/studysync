@@ -8,6 +8,7 @@ import {
   IconClose, IconTrash, IconSave, IconRefresh, IconCalendar, IconTrophy
 } from '@/components/NavIcons'
 import FileUpload from '@/components/FileUpload'
+import FilePreviewButton from '@/components/FilePreviewButton'
 import { getDaysLeft } from '@/lib/dateUtils'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -123,10 +124,12 @@ function VersionsModal({ project, onClose }: { project: Project; onClose: () => 
                   </div>
                 )}
                 {v.fileUrl && (
-                  <a href={v.fileUrl} target="_blank" rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 text-[11px] font-mono text-[#63b3ed] hover:underline">
-                    🔗 View submitted file
-                  </a>
+                  <FilePreviewButton
+                    url={v.fileUrl}
+                    label="submission"
+                    accentColor="#63b3ed"
+                    compact
+                  />
                 )}
                 {v.feedback && (
                   <div className="p-2.5 bg-[rgba(26,122,110,0.04)] border border-[rgba(26,122,110,0.15)] rounded-sm">
@@ -640,10 +643,12 @@ export default function StudentProjectsPage() {
                           </button>
                         )}
                         {sub?.fileUrl && (
-                          <a href={sub.fileUrl} target="_blank" rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-[#63b3ed] hover:underline font-mono">
-                            🔗 Submitted file
-                          </a>
+                          <FilePreviewButton
+                            url={sub.fileUrl}
+                            label="submission"
+                            accentColor="#63b3ed"
+                            compact
+                          />
                         )}
                         {sub && (
                           <button onClick={() => toggleMessages(project._id)}
