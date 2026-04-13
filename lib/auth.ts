@@ -82,8 +82,8 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: 'jwt',
-    maxAge:   8 * 60 * 60,   // 8 hours absolute max (idle timeout handled client-side)
-    updateAge: 60,            // refresh JWT every 60 s — lets idle detection work
+    maxAge:   1 * 60 * 60,   // 1 hour absolute max (idle timeout handled client-side)
+    updateAge: 30 * 60,       // refresh JWT every 30 min
   },
 
   // ── Security hardening ──────────────────────────────────────────────
