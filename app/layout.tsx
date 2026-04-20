@@ -5,6 +5,7 @@ import { Providers } from './providers'
 import AccessibilityMenu from '@/components/AccessibilityMenu';
 import ScrollToTop from '@/components/ScrollToTop';
 import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const quicksand = Quicksand({
   subsets: ['latin'],
@@ -38,6 +39,7 @@ export default function RootLayout({
         <ScrollToTop />
         <AccessibilityMenu />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
